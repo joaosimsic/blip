@@ -23,7 +23,7 @@ function M.start(opts)
 
     local input_line = extmark_line + 1
     vim.api.nvim_buf_set_lines(bufnr, input_line, input_line, false, { '' })
-    vim.api.nvim_win_set_cursor(0, { input_line + 1, 0 })
+    vim.api.nvim_win_set_cursor(0, { input_line, 0 })
 
     local submitting = false
     local canceling = false

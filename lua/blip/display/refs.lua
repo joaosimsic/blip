@@ -16,7 +16,11 @@ end
 function M.parse_line_tag(line)
     local ref, rest = line:match('^L(%d+):%s*(.*)$')
     if ref then return tonumber(ref), rest end
-    ref, rest = line:match('^L(%d+)[%–%—%-]L%d+:%s*(.*)$')
+    ref, rest = line:match('^L(%d+)%–L%d+:%s*(.*)$')
+    if ref then return tonumber(ref), rest end
+    ref, rest = line:match('^L(%d+)%—L%d+:%s*(.*)$')
+    if ref then return tonumber(ref), rest end
+    ref, rest = line:match('^L(%d+)%-L%d+:%s*(.*)$')
     if ref then return tonumber(ref), rest end
     return nil, nil
 end
