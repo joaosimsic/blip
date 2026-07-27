@@ -86,6 +86,8 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
     local accumulated = ''
     local completed = false
     local first_chunk_logged = false
+    local total_bytes = 0
+    local seen_valid_sse = false
 
     local stream_handler = vim.schedule_wrap(function(err, data)
         if completed then return end
@@ -96,8 +98,11 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
         end
         if data == nil then return end
 
-        local done
-        sse_buffer, done = sse.process(sse_buffer, data, function(chunk)
+        total_bytes = total_bytes + #data
+
+        local done, found_data_line
+        sse_buffer, done, found_data_line = sse.process(sse_buffer, data, function(chunk)
+            seen_valid_sse = true
             if not first_chunk_logged then
                 log.debug('First stream chunk: ' .. tostring(chunk))
                 first_chunk_logged = true
@@ -105,10 +110,17 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
             accumulated = accumulated .. chunk
             on_delta(chunk, accumulated)
         end)
+        if found_data_line then seen_valid_sse = true end
 
         if done then
             completed = true
             on_complete(accumulated)
+            return
+        end
+
+        if not seen_valid_sse and total_bytes > 500 then
+            completed = true
+            on_error('Stream returned non-SSE data (possible API error or HTML response)')
         end
     end)
 

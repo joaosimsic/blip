@@ -46,6 +46,7 @@ function M.run(opts)
         response_extmark_id = nil,
         stream_line_count = 0,
         stream_placed_lines = {},
+        stream_placed_extmark_ids = {},
         stream_active_linenr = nil,
         stream_active_extmark_id = nil,
     }

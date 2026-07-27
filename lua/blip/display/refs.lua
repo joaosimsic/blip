@@ -22,6 +22,9 @@ function M.parse_line_tag(line)
     if ref then return tonumber(ref), rest end
     ref, rest = line:match('^L(%d+)%-L%d+:%s*(.*)$')
     if ref then return tonumber(ref), rest end
+    -- L<N>: with markdown bold around the number (e.g., **L1**:
+    ref, rest = line:match('^%s*%*+L(%d+)%*+:%s*(.*)$')
+    if ref then return tonumber(ref), rest end
     return nil, nil
 end
 
@@ -32,9 +35,10 @@ function M.place_line_ref(bufnr, linenr, text)
     local virt_lines = display.wrap_text(text, indent)
     if #virt_lines == 0 then return end
 
-    pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, linenr, 0, {
+    local ok, id = pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, linenr, 0, {
         virt_lines = virt_lines,
     })
+    if ok then return id end
 end
 
 function M.update_line_ref(bufnr, linenr, text, extmark_id)
@@ -88,7 +92,7 @@ local function store_refs_state(bufnr, line_entries, start_0idx, end_0idx)
     end
 end
 
-local function distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx)
+local function distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx, extmark_ids)
     store_refs_state(bufnr, line_entries, start_0idx, end_0idx)
 
     local chunks = {}
@@ -105,14 +109,16 @@ local function distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx)
 
     for linenr, chunk in pairs(chunks) do
         if #chunk > 0 then
-            vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, linenr, 0, {
-                virt_lines = chunk,
-            })
+            local opts = { virt_lines = chunk }
+            if extmark_ids and extmark_ids[linenr] then
+                opts.id = extmark_ids[linenr]
+            end
+            vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, linenr, 0, opts)
         end
     end
 end
 
-local function distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines)
+local function distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, extmark_ids)
     if #seq_lines == 0 then return end
 
     local num_source_lines = end_0idx - start_0idx + 1
@@ -133,13 +139,15 @@ local function distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines)
             idx = idx + 1
         end
         if #items > 0 then display._last_refs[linenr] = table.concat(items, ' ') end
-        vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, linenr, 0, {
-            virt_lines = chunk,
-        })
+        local opts = { virt_lines = chunk }
+        if extmark_ids and extmark_ids[linenr] then
+            opts.id = extmark_ids[linenr]
+        end
+        vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, linenr, 0, opts)
     end
 end
 
-function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer, keep_extmark)
+function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer, keep_extmark, extmark_ids)
     if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
     if not keep_extmark then pcall(vim.api.nvim_buf_del_extmark, bufnr, display.ns_id, extmark_id) end
@@ -147,9 +155,9 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer, 
     local line_entries, seq_lines, has_refs = parse_response_lines(answer)
 
     if has_refs then
-        distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx)
+        distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx, extmark_ids)
     elseif not keep_extmark then
-        distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines)
+        distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, extmark_ids)
     end
 end
 

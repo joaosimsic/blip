@@ -14,6 +14,7 @@ end
 
 function M.process(buffer, data, on_chunk)
     buffer = buffer .. data .. '\n'
+    local found_data_line = false
 
     while true do
         local dbl = buffer:find('\n\n')
@@ -23,11 +24,12 @@ function M.process(buffer, data, on_chunk)
         buffer = buffer:sub(dbl + 2)
 
         for line in event:gmatch('[^\r\n]+') do
-            if process_event_line(line, on_chunk) then return buffer, true end
+            if line:match('^data:') then found_data_line = true end
+            if process_event_line(line, on_chunk) then return buffer, true, true end
         end
     end
 
-    return buffer, false
+    return buffer, false, found_data_line
 end
 
 return M

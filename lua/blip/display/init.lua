@@ -38,6 +38,12 @@ local function comment_line(text)
     return '-- ' .. text
 end
 
+local function line_has_comment(bufnr, linenr_0idx)
+    local line = vim.api.nvim_buf_get_lines(bufnr, linenr_0idx, linenr_0idx + 1, false)[1]
+    if not line then return false end
+    return line:find('%-%-') ~= nil
+end
+
 function M.insert_explanations()
     local bufnr = vim.api.nvim_get_current_buf()
     if M._last_bufnr ~= bufnr or not M._last_refs then
@@ -57,10 +63,12 @@ function M.insert_explanations()
 
     local count = 0
     for _, linenr_0idx in ipairs(linenrs) do
-        local indent = M.get_indent(bufnr, linenr_0idx)
-        local comment = indent .. comment_line(refs[linenr_0idx])
-        vim.api.nvim_buf_set_lines(bufnr, linenr_0idx + 1, linenr_0idx + 1, false, { comment })
-        count = count + 1
+        if not line_has_comment(bufnr, linenr_0idx) then
+            local indent = M.get_indent(bufnr, linenr_0idx)
+            local comment = indent .. comment_line(refs[linenr_0idx])
+            vim.api.nvim_buf_set_lines(bufnr, linenr_0idx + 1, linenr_0idx + 1, false, { comment })
+            count = count + 1
+        end
     end
     vim.api.nvim_buf_clear_namespace(bufnr, M.ns_id, 0, -1)
     vim.notify(string.format('Blip: inserted %d explanation line(s)', count))

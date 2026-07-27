@@ -5,6 +5,16 @@ local tools = require('blip.tools')
 
 local M = {}
 
+local function non_ref_lines(text)
+    if not text:find('L%d+:') then return text end
+    local lines = vim.split(text, '\n')
+    local result = {}
+    for _, line in ipairs(lines) do
+        if not line:match('^L%d+:') then table.insert(result, line) end
+    end
+    return table.concat(result, '\n')
+end
+
 local function refresh_display(state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
     display.show_tool_actions(state.bufnr, state.extmark_id, state.extmark_line, state.actions, state.reasoning)
@@ -37,10 +47,18 @@ local function show_final(content, state)
         state.response_extmark_id = id
     end
 
-    display.show_streaming_response(state.bufnr, state.response_extmark_id, state.extmark_line, trimmed)
+    display.show_streaming_response(state.bufnr, state.response_extmark_id, state.extmark_line, non_ref_lines(trimmed))
 
     if trimmed:find('L%d+:') then
-        display.distribute_response(state.bufnr, state.extmark_id, state.start_0idx, state.extmark_line, trimmed, true)
+        display.distribute_response(
+            state.bufnr,
+            state.extmark_id,
+            state.start_0idx,
+            state.extmark_line,
+            trimmed,
+            true,
+            state.stream_placed_extmark_ids
+        )
     end
 end
 
@@ -117,7 +135,8 @@ local function place_line_ref_if_needed(line, state)
     if linenr < state.start_0idx or linenr > state.extmark_line or state.stream_placed_lines[linenr] then return end
 
     clear_line_if_active(linenr, state)
-    display.place_line_ref(state.bufnr, linenr, rest)
+    local id = display.place_line_ref(state.bufnr, linenr, rest)
+    if id then state.stream_placed_extmark_ids[linenr] = id end
     state.stream_placed_lines[linenr] = true
 end
 
@@ -147,7 +166,12 @@ local function process_stream_delta(accumulated, state)
 
     state.stream_line_count = complete_count
 
-    display.show_streaming_response(state.bufnr, state.response_extmark_id, state.extmark_line, accumulated)
+    display.show_streaming_response(
+        state.bufnr,
+        state.response_extmark_id,
+        state.extmark_line,
+        non_ref_lines(accumulated)
+    )
 
     if not ends_with_nl then
         local ref, rest = display.parse_line_tag(lines[#lines])
@@ -155,6 +179,9 @@ local function process_stream_delta(accumulated, state)
             local linenr = ref - 1
             if linenr >= state.start_0idx and linenr <= state.extmark_line then
                 if linenr ~= state.stream_active_linenr then
+                    if state.stream_active_linenr and state.stream_active_extmark_id then
+                        state.stream_placed_extmark_ids[state.stream_active_linenr] = state.stream_active_extmark_id
+                    end
                     state.stream_active_linenr = linenr
                     state.stream_active_extmark_id = nil
                 end
@@ -180,7 +207,8 @@ function M.agent_round(messages, state, depth)
 
     vim.notify(string.format('agent round %d: %d messages', depth + 1, #messages), vim.log.levels.INFO)
 
-    api.chat(messages, tools.definitions, state.provider, state.api_key, function(message)
+    local round_tools = (depth == 0) and nil or tools.definitions
+    api.chat(messages, round_tools, state.provider, state.api_key, function(message)
         if message.reasoning_content then
             state.reasoning = message.reasoning_content
             refresh_display(state)
@@ -198,7 +226,19 @@ function M.agent_round(messages, state, depth)
             state.api_key,
             function(_, accumulated) process_stream_delta(accumulated, state) end,
             function(full_content) show_final(full_content, state) end,
-            function(err) show_error(err, state) end
+            function(err)
+                log.debug('Stream failed, falling back to non-streaming: ' .. tostring(err))
+                api.chat(
+                    messages,
+                    nil,
+                    state.provider,
+                    state.api_key,
+                    function(message) show_final(message.content or '', state) end,
+                    function(err2)
+                        show_error('Stream failed (' .. err .. '); fallback also failed (' .. err2 .. ')', state)
+                    end
+                )
+            end
         )
     end, function(err) show_error(err, state) end)
 end
