@@ -9,6 +9,17 @@ local function build_headers(api_key)
     }
 end
 
+local function format_api_error(response)
+    local msg = 'HTTP ' .. response.status
+    local ok, res = pcall(vim.fn.json_decode, tostring(response.body))
+    if ok and res and res.error then
+        msg = msg
+            .. ': '
+            .. (type(res.error) == 'table' and (res.error.message or vim.inspect(res.error)) or tostring(res.error))
+    end
+    return msg
+end
+
 function M.chat(messages, tools, provider, api_key, on_success, on_error)
     local curl = require('plenary.curl')
 
@@ -40,17 +51,7 @@ function M.chat(messages, tools, provider, api_key, on_success, on_error)
             end
 
             if response.status and response.status >= 400 then
-                local msg = 'HTTP ' .. response.status
-                local ok, res = pcall(vim.fn.json_decode, tostring(response.body))
-                if ok and res and res.error then
-                    msg = msg
-                        .. ': '
-                        .. (
-                            type(res.error) == 'table' and (res.error.message or vim.inspect(res.error))
-                            or tostring(res.error)
-                        )
-                end
-                on_error(msg)
+                on_error(format_api_error(response))
                 return
             end
 

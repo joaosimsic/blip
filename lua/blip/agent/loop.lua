@@ -79,6 +79,73 @@ local function handle_tool_calls(tool_calls, messages, state)
     end
 end
 
+local function clear_line_if_active(linenr, state)
+    if linenr ~= state.stream_active_linenr or not state.stream_active_extmark_id then return end
+    pcall(vim.api.nvim_buf_del_extmark, state.bufnr, display.ns_id, state.stream_active_extmark_id)
+    state.stream_active_linenr = nil
+    state.stream_active_extmark_id = nil
+end
+
+local function place_line_ref_if_needed(line, state)
+    local ref, rest = display.parse_line_tag(line)
+    if not ref then return end
+
+    local linenr = ref - 1
+    if linenr < state.start_0idx or linenr > state.extmark_line or state.stream_placed_lines[linenr] then return end
+
+    clear_line_if_active(linenr, state)
+    display.place_line_ref(state.bufnr, linenr, rest)
+    state.stream_placed_lines[linenr] = true
+end
+
+local function clear_active_line(state)
+    if not state.stream_active_linenr then return end
+    state.stream_active_linenr = nil
+    state.stream_active_extmark_id = nil
+end
+
+local function handle_incomplete_line(line, state)
+    local ref, rest = display.parse_line_tag(line)
+    if ref then
+        local linenr = ref - 1
+        if linenr >= state.start_0idx and linenr <= state.extmark_line then
+            if linenr ~= state.stream_active_linenr then
+                state.stream_active_linenr = linenr
+                state.stream_active_extmark_id = nil
+                pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, 0, 0, {
+                    id = state.extmark_id,
+                    virt_lines = {},
+                })
+            end
+            state.stream_active_extmark_id =
+                display.update_line_ref(state.bufnr, linenr, rest, state.stream_active_extmark_id)
+        end
+        return
+    end
+    clear_active_line(state)
+    display.show_incomplete_line(state.bufnr, state.extmark_id, state.extmark_line, line)
+end
+
+local function process_stream_delta(accumulated, state)
+    if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
+
+    local lines = vim.split(accumulated, '\n')
+    local ends_with_nl = accumulated:sub(-1) == '\n'
+    local complete_count = #lines - 1
+
+    for i = state.stream_line_count + 1, complete_count do
+        place_line_ref_if_needed(lines[i], state)
+    end
+
+    state.stream_line_count = complete_count
+
+    if not ends_with_nl then
+        handle_incomplete_line(lines[#lines], state)
+        return
+    end
+    clear_active_line(state)
+end
+
 function M.agent_round(messages, state, depth)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
     if depth > MAX_DEPTH then
@@ -95,70 +162,14 @@ function M.agent_round(messages, state, depth)
             return
         end
 
-        api.chat_stream(messages, state.provider, state.api_key, function(_, accumulated)
-            if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
-
-            local lines = vim.split(accumulated, '\n')
-            local ends_with_nl = accumulated:sub(-1) == '\n'
-            local complete_count = #lines - 1
-
-            for i = state.stream_line_count + 1, complete_count do
-                local line = lines[i]
-                local ref, rest = display.parse_line_tag(line)
-                if ref then
-                    local linenr = ref - 1
-                    if
-                        linenr >= state.start_0idx
-                        and linenr <= state.extmark_line
-                        and not state.stream_placed_lines[linenr]
-                    then
-                        if linenr == state.stream_active_linenr and state.stream_active_extmark_id then
-                            pcall(
-                                vim.api.nvim_buf_del_extmark,
-                                state.bufnr,
-                                display.ns_id,
-                                state.stream_active_extmark_id
-                            )
-                            state.stream_active_linenr = nil
-                            state.stream_active_extmark_id = nil
-                        end
-                        display.place_line_ref(state.bufnr, linenr, rest)
-                        state.stream_placed_lines[linenr] = true
-                    end
-                end
-            end
-
-            state.stream_line_count = complete_count
-
-            if not ends_with_nl then
-                local last_line = lines[#lines]
-                local ref, rest = display.parse_line_tag(last_line)
-                if ref then
-                    local linenr = ref - 1
-                    if linenr >= state.start_0idx and linenr <= state.extmark_line then
-                        if linenr ~= state.stream_active_linenr then
-                            state.stream_active_linenr = linenr
-                            state.stream_active_extmark_id = nil
-                            pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, 0, 0, {
-                                id = state.extmark_id,
-                                virt_lines = {},
-                            })
-                        end
-                        state.stream_active_extmark_id =
-                            display.update_line_ref(state.bufnr, linenr, rest, state.stream_active_extmark_id)
-                    end
-                else
-                    if state.stream_active_linenr then
-                        state.stream_active_linenr = nil
-                        state.stream_active_extmark_id = nil
-                    end
-                    display.show_incomplete_line(state.bufnr, state.extmark_id, state.extmark_line, last_line)
-                end
-            elseif state.stream_active_linenr then
-                state.stream_active_linenr = nil
-                state.stream_active_extmark_id = nil
-            end
-        end, function(full_content) show_final(full_content, state) end, function(err) show_error(err, state) end)
+        api.chat_stream(
+            messages,
+            state.provider,
+            state.api_key,
+            function(_, accumulated) process_stream_delta(accumulated, state) end,
+            function(full_content) show_final(full_content, state) end,
+            function(err) show_error(err, state) end
+        )
     end, function(err) show_error(err, state) end)
 end
 
