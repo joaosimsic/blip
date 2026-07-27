@@ -1,7 +1,7 @@
+local sse = require('blip.api.sse')
+
 local M = {}
 
----@param api_key string
----@return table<string,string>
 local function build_headers(api_key)
     return {
         ['Content-Type'] = 'application/json',
@@ -9,12 +9,6 @@ local function build_headers(api_key)
     }
 end
 
----@param messages BlipMessage[]
----@param tools table[]?
----@param provider BlipProviderConfig
----@param api_key string
----@param on_success fun(message: BlipMessage)
----@param on_error fun(msg: string)
 function M.chat(messages, tools, provider, api_key, on_success, on_error)
     local curl = require('plenary.curl')
 
@@ -71,12 +65,6 @@ function M.chat(messages, tools, provider, api_key, on_success, on_error)
     })
 end
 
----@param messages BlipMessage[]
----@param provider BlipProviderConfig
----@param api_key string
----@param on_delta fun(chunk: string, accumulated: string)
----@param on_complete fun(full_content: string)
----@param on_error fun(msg: string)
 function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_error)
     local curl = require('plenary.curl')
 
@@ -91,33 +79,6 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
     local accumulated = ''
     local completed = false
 
-    local function process_sse()
-        while true do
-            local dbl = sse_buffer:find('\n\n')
-            if not dbl then break end
-
-            local event = sse_buffer:sub(1, dbl - 1)
-            sse_buffer = sse_buffer:sub(dbl + 2)
-
-            for line in event:gmatch('[^\r\n]+') do
-                local payload = line:match('^data: (.*)$')
-                if payload then
-                    if payload == '[DONE]' then return true end
-                    local ok, json = pcall(vim.fn.json_decode, payload)
-                    if ok and json.choices and json.choices[1] then
-                        local delta = json.choices[1].delta or {}
-                        local chunk = delta.content
-                        if type(chunk) == 'string' then
-                            accumulated = accumulated .. chunk
-                            on_delta(chunk, accumulated)
-                        end
-                    end
-                end
-            end
-        end
-        return false
-    end
-
     local stream_handler = vim.schedule_wrap(function(err, data)
         if completed then return end
         if err then
@@ -127,8 +88,13 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
         end
         if data == nil then return end
 
-        sse_buffer = sse_buffer .. data .. '\n'
-        if process_sse() then
+        local done
+        sse_buffer, done = sse.process(sse_buffer, data, function(chunk)
+            accumulated = accumulated .. chunk
+            on_delta(chunk, accumulated)
+        end)
+
+        if done then
             completed = true
             on_complete(accumulated)
         end

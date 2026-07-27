@@ -2,7 +2,7 @@ local config = require('blip.config')
 local display = require('blip.display')
 local agent = require('blip.agent')
 local editor = require('blip.editor')
-local env = require('blip.env')
+local env = require('blip.editor.env')
 local prompt = require('blip.prompt')
 local state = require('blip.state')
 
@@ -11,9 +11,7 @@ if not deps_ok then vim.notify('Blip: missing dependency "plenary.nvim"', vim.lo
 
 local M = {}
 
-function M.setup(opts)
-    config.setup(opts)
-end
+function M.setup(opts) config.setup(opts) end
 
 local function require_deps()
     if not deps_ok then
