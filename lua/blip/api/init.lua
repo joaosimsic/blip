@@ -1,3 +1,4 @@
+local log = require('blip.log')
 local sse = require('blip.api.sse')
 
 local M = {}
@@ -35,6 +36,7 @@ function M.chat(messages, tools, provider, api_key, on_success, on_error)
     end
 
     local json_body = vim.fn.json_encode(body)
+    log.debug('Request body: ' .. json_body)
 
     vim.notify(string.format('chat: %d messages, tools=%s', #messages, tostring(tools ~= nil)), vim.log.levels.INFO)
 
@@ -49,6 +51,9 @@ function M.chat(messages, tools, provider, api_key, on_success, on_error)
                 on_error('curl error (exit ' .. response.exit .. ')')
                 return
             end
+
+            log.debug('Response status: ' .. tostring(response.status))
+            log.debug('Response body: ' .. tostring(response.body):sub(1, 2000))
 
             if response.status and response.status >= 400 then
                 on_error(format_api_error(response))
@@ -75,10 +80,12 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
         max_tokens = provider.max_tokens,
         stream = true,
     })
+    log.debug('Request body (stream): ' .. json_body)
 
     local sse_buffer = ''
     local accumulated = ''
     local completed = false
+    local first_chunk_logged = false
 
     local stream_handler = vim.schedule_wrap(function(err, data)
         if completed then return end
@@ -91,6 +98,10 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
 
         local done
         sse_buffer, done = sse.process(sse_buffer, data, function(chunk)
+            if not first_chunk_logged then
+                log.debug('First stream chunk: ' .. tostring(chunk))
+                first_chunk_logged = true
+            end
             accumulated = accumulated .. chunk
             on_delta(chunk, accumulated)
         end)
@@ -114,6 +125,7 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
             return
         end
         if vim.trim(accumulated or '') ~= '' then
+            log.debug('Stream complete (' .. #accumulated .. ' chars): ' .. accumulated:sub(1, 500))
             on_complete(accumulated)
         else
             on_error('Empty response from API')

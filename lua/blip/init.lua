@@ -1,3 +1,4 @@
+local log = require('blip.log')
 local config = require('blip.config')
 local display = require('blip.display')
 local agent = require('blip.agent')
@@ -11,7 +12,10 @@ if not deps_ok then vim.notify('Blip: missing dependency "plenary.nvim"', vim.lo
 
 local M = {}
 
-function M.setup(opts) config.setup(opts) end
+function M.setup(opts)
+    log.setup(opts)
+    config.setup(opts)
+end
 
 local function require_deps()
     if not deps_ok then
@@ -30,6 +34,7 @@ function M.ask()
     end
 
     local mode = env.get_mode()
+    log.debug('Mode: ' .. tostring(mode))
 
     if not mode then
         vim.notify('Blip: unsupported mode', vim.log.levels.WARN)
@@ -39,6 +44,7 @@ function M.ask()
     local bufnr = vim.api.nvim_get_current_buf()
     local line_count = vim.api.nvim_buf_line_count(bufnr)
     local start_line, end_line = editor.get_section(bufnr, mode)
+    log.debug('Selection: lines ' .. start_line .. '-' .. end_line)
     local extmark_line = math.min(end_line - 1, math.max(0, line_count - 1))
 
     local buf_lines = vim.api.nvim_buf_get_lines(bufnr, start_line - 1, end_line, false)

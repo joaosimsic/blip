@@ -1,3 +1,4 @@
+local log = require('blip.log')
 local display = require('blip.display')
 local api = require('blip.api')
 local tools = require('blip.tools')
@@ -63,11 +64,13 @@ local function handle_tool_calls(tool_calls, messages, state)
 
     for _, tc in ipairs(tool_calls) do
         add_action(tool_preview(tc), state)
+        log.debug('Tool call: ' .. vim.inspect(tc))
 
         local ok, args = pcall(vim.fn.json_decode, tc['function'].arguments)
         if not ok then args = {} end
 
         local result = tools.execute(tc['function'].name, args, state.project_root)
+        log.debug('Tool result (' .. #result .. ' chars): ' .. result:sub(1, 500))
 
         vim.notify(string.format('tool %s: %d chars', tc['function'].name, #result), vim.log.levels.INFO)
 
@@ -152,6 +155,10 @@ function M.agent_round(messages, state, depth)
         show_error('Reached maximum tool call depth', state)
         return
     end
+
+    local msgs_str = vim.inspect(messages)
+    if #msgs_str > 2000 then msgs_str = msgs_str:sub(1, 2000) .. '... (truncated)' end
+    log.debug('Messages round ' .. (depth + 1) .. ' (' .. #messages .. '): ' .. msgs_str)
 
     vim.notify(string.format('agent round %d: %d messages', depth + 1, #messages), vim.log.levels.INFO)
 
