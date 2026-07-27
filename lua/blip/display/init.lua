@@ -1,4 +1,5 @@
 local M = {}
+package.loaded['blip.display'] = M
 
 M.ns_id = vim.api.nvim_create_namespace('blip')
 M._last_bufnr = nil
