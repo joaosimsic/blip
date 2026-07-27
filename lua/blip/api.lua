@@ -1,15 +1,3 @@
----@class BlipApiConfig
----@field base_url string
----@field model string
----@field max_tokens integer
-
----@type BlipApiConfig
-local config = {
-    base_url = 'https://opencode.ai/zen/go/v1',
-    model = 'deepseek-v4-flash',
-    max_tokens = 8192,
-}
-
 local M = {}
 
 ---@param api_key string
@@ -23,16 +11,17 @@ end
 
 ---@param messages BlipMessage[]
 ---@param tools table[]?
+---@param provider BlipProviderConfig
 ---@param api_key string
 ---@param on_success fun(message: BlipMessage)
 ---@param on_error fun(msg: string)
-function M.chat(messages, tools, api_key, on_success, on_error)
+function M.chat(messages, tools, provider, api_key, on_success, on_error)
     local curl = require('plenary.curl')
 
     local body = {
-        model = config.model,
+        model = provider.model,
         messages = messages,
-        max_tokens = config.max_tokens,
+        max_tokens = provider.max_tokens,
         stream = false,
     }
     if tools then
@@ -45,7 +34,7 @@ function M.chat(messages, tools, api_key, on_success, on_error)
     vim.notify(string.format('chat: %d messages, tools=%s', #messages, tostring(tools ~= nil)), vim.log.levels.INFO)
 
     curl.request({
-        url = config.base_url .. '/chat/completions',
+        url = provider.base_url .. '/chat/completions',
         method = 'POST',
         headers = build_headers(api_key),
         body = json_body,
@@ -83,17 +72,18 @@ function M.chat(messages, tools, api_key, on_success, on_error)
 end
 
 ---@param messages BlipMessage[]
+---@param provider BlipProviderConfig
 ---@param api_key string
 ---@param on_delta fun(chunk: string, accumulated: string)
 ---@param on_complete fun(full_content: string)
 ---@param on_error fun(msg: string)
-function M.chat_stream(messages, api_key, on_delta, on_complete, on_error)
+function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_error)
     local curl = require('plenary.curl')
 
     local json_body = vim.fn.json_encode({
-        model = config.model,
+        model = provider.model,
         messages = messages,
-        max_tokens = config.max_tokens,
+        max_tokens = provider.max_tokens,
         stream = true,
     })
 
@@ -164,7 +154,7 @@ function M.chat_stream(messages, api_key, on_delta, on_complete, on_error)
     end)
 
     curl.request({
-        url = config.base_url .. '/chat/completions',
+        url = provider.base_url .. '/chat/completions',
         method = 'POST',
         headers = build_headers(api_key),
         body = json_body,

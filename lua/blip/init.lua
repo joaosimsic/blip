@@ -1,3 +1,4 @@
+local config = require('blip.config')
 local display = require('blip.display')
 local agent = require('blip.agent')
 local editor = require('blip.editor')
@@ -10,6 +11,10 @@ if not deps_ok then vim.notify('Blip: missing dependency "plenary.nvim"', vim.lo
 
 local M = {}
 
+function M.setup(opts)
+    config.setup(opts)
+end
+
 local function require_deps()
     if not deps_ok then
         vim.notify('Blip: missing dependency "plenary.nvim"', vim.log.levels.ERROR, { title = 'Blip' })
@@ -19,6 +24,12 @@ end
 
 function M.ask()
     if not require_deps() then return end
+
+    local cfg = config.get()
+    if not cfg then
+        vim.notify('Blip: not configured. Call require("blip").setup({...}) first', vim.log.levels.ERROR)
+        return
+    end
 
     local mode = env.get_mode()
 
@@ -41,6 +52,7 @@ function M.ask()
         start_line = start_line,
         end_line = end_line,
         numbered_code = numbered_code,
+        provider = cfg.provider,
     }
 
     opts.on_submit = function(input)

@@ -128,7 +128,7 @@ local function agent_round(messages, state, depth)
 
 	vim.notify(string.format("agent round %d: %d messages", depth + 1, #messages), vim.log.levels.INFO)
 
-	api.chat(messages, tools.definitions, state.api_key,
+	api.chat(messages, tools.definitions, state.provider, state.api_key,
 		---@param message BlipMessage
 		function(message)
 			if message.tool_calls and #message.tool_calls > 0 then
@@ -137,7 +137,7 @@ local function agent_round(messages, state, depth)
 				return
 			end
 
-			api.chat_stream(messages, state.api_key,
+			api.chat_stream(messages, state.provider, state.api_key,
 				---@param _ string
 				---@param accumulated string
 				function(_, accumulated)
@@ -221,7 +221,7 @@ end
 ---@field end_line integer
 ---@field numbered_code string
 ---@field input string
----@field api_key? string
+---@field provider BlipProviderConfig
 
 ---@param opts BlipRunOpts
 function M.run(opts)
@@ -232,10 +232,12 @@ function M.run(opts)
 	local numbered_code = opts.numbered_code
 	local input = opts.input
 	local project_root = tools.find_project_root(bufnr)
-	local api_key = opts.api_key or vim.env.OPENAI_API_KEY
+	local provider = opts.provider
+	local api_key = provider.api_key or (provider.api_key_env and vim.env[provider.api_key_env])
 
 	if not api_key then
-		vim.notify("Blip: Set OPENAI_API_KEY", vim.log.levels.ERROR)
+		local var = provider.api_key_env or 'not configured'
+		vim.notify("Blip: No API key found (set " .. var .. " or pass api_key in setup)", vim.log.levels.ERROR)
 		return
 	end
 
@@ -252,6 +254,7 @@ function M.run(opts)
 		start_0idx = start_line - 1,
 		api_key = api_key,
 		project_root = project_root,
+		provider = provider,
 		actions = {},
 		stream_line_count = 0,
 		stream_placed_lines = {},

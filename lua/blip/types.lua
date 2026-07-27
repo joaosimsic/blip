@@ -7,6 +7,16 @@
 ---@class BlipOpts
 ---@field visual? boolean
 
+---@class BlipProviderConfig
+---@field base_url string
+---@field model string
+---@field max_tokens integer
+---@field api_key? string
+---@field api_key_env? string
+
+---@class BlipConfig
+---@field provider BlipProviderConfig
+
 ---@class BlipState
 ---@field bufnr integer
 ---@field extmark_id integer
@@ -14,6 +24,7 @@
 ---@field start_0idx integer
 ---@field api_key string
 ---@field project_root string
+---@field provider BlipProviderConfig
 ---@field actions string[]
 ---@field stream_line_count integer
 ---@field stream_placed_lines table<integer,boolean>
