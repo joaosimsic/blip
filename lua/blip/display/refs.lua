@@ -52,6 +52,8 @@ function M.update_line_ref(bufnr, linenr, text, extmark_id)
     return nil
 end
 
+local function is_table_line(text) return vim.trim(text):match('^|') ~= nil end
+
 local function parse_response_lines(answer)
     local lines = vim.split(answer, '\n')
     local line_entries = {}
@@ -65,9 +67,9 @@ local function parse_response_lines(answer)
             current_ref = ref - 1
             has_refs = true
             if not line_entries[current_ref] then line_entries[current_ref] = {} end
-            wrap_and_add(line_entries[current_ref], rest)
+            if not is_table_line(rest) then wrap_and_add(line_entries[current_ref], rest) end
         elseif has_refs then
-            if current_ref then wrap_and_add(line_entries[current_ref], line) end
+            if current_ref and not is_table_line(line) then wrap_and_add(line_entries[current_ref], line) end
         else
             wrap_and_add(seq_lines, line)
         end
@@ -137,19 +139,18 @@ local function distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines)
     end
 end
 
-function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer)
+function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer, keep_extmark)
     if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
-    pcall(vim.api.nvim_buf_del_extmark, bufnr, display.ns_id, extmark_id)
+    if not keep_extmark then pcall(vim.api.nvim_buf_del_extmark, bufnr, display.ns_id, extmark_id) end
 
     local line_entries, seq_lines, has_refs = parse_response_lines(answer)
 
     if has_refs then
         distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx)
-        return
+    elseif not keep_extmark then
+        distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines)
     end
-
-    distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines)
 end
 
 return M

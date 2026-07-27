@@ -30,14 +30,17 @@ local function show_final(content, state)
         return
     end
 
-    if trimmed:find('L%d+:') then
-        pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, 0, 0, {
-            id = state.extmark_id,
+    if not state.response_extmark_id then
+        local _, id = pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, state.extmark_line, 0, {
             virt_lines = {},
         })
-    else
-        vim.api.nvim_buf_clear_namespace(state.bufnr, display.ns_id, 0, -1)
-        display.distribute_response(state.bufnr, state.extmark_id, state.start_0idx, state.extmark_line, trimmed)
+        state.response_extmark_id = id
+    end
+
+    display.show_streaming_response(state.bufnr, state.response_extmark_id, state.extmark_line, trimmed)
+
+    if trimmed:find('L%d+:') then
+        display.distribute_response(state.bufnr, state.extmark_id, state.start_0idx, state.extmark_line, trimmed, true)
     end
 end
 
@@ -108,6 +111,8 @@ local function place_line_ref_if_needed(line, state)
     local ref, rest = display.parse_line_tag(line)
     if not ref then return end
 
+    if vim.trim(rest):match('^|') then return end
+
     local linenr = ref - 1
     if linenr < state.start_0idx or linenr > state.extmark_line or state.stream_placed_lines[linenr] then return end
 
@@ -122,30 +127,15 @@ local function clear_active_line(state)
     state.stream_active_extmark_id = nil
 end
 
-local function handle_incomplete_line(line, state)
-    local ref, rest = display.parse_line_tag(line)
-    if ref then
-        local linenr = ref - 1
-        if linenr >= state.start_0idx and linenr <= state.extmark_line then
-            if linenr ~= state.stream_active_linenr then
-                state.stream_active_linenr = linenr
-                state.stream_active_extmark_id = nil
-                pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, 0, 0, {
-                    id = state.extmark_id,
-                    virt_lines = {},
-                })
-            end
-            state.stream_active_extmark_id =
-                display.update_line_ref(state.bufnr, linenr, rest, state.stream_active_extmark_id)
-        end
-        return
-    end
-    clear_active_line(state)
-    display.show_incomplete_line(state.bufnr, state.extmark_id, state.extmark_line, line)
-end
-
 local function process_stream_delta(accumulated, state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
+
+    if not state.response_extmark_id then
+        local _, id = pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, state.extmark_line, 0, {
+            virt_lines = {},
+        })
+        state.response_extmark_id = id
+    end
 
     local lines = vim.split(accumulated, '\n')
     local ends_with_nl = accumulated:sub(-1) == '\n'
@@ -157,8 +147,21 @@ local function process_stream_delta(accumulated, state)
 
     state.stream_line_count = complete_count
 
+    display.show_streaming_response(state.bufnr, state.response_extmark_id, state.extmark_line, accumulated)
+
     if not ends_with_nl then
-        handle_incomplete_line(lines[#lines], state)
+        local ref, rest = display.parse_line_tag(lines[#lines])
+        if ref and not vim.trim(rest):match('^|') then
+            local linenr = ref - 1
+            if linenr >= state.start_0idx and linenr <= state.extmark_line then
+                if linenr ~= state.stream_active_linenr then
+                    state.stream_active_linenr = linenr
+                    state.stream_active_extmark_id = nil
+                end
+                state.stream_active_extmark_id =
+                    display.update_line_ref(state.bufnr, linenr, rest, state.stream_active_extmark_id)
+            end
+        end
         return
     end
     clear_active_line(state)

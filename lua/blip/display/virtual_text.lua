@@ -37,4 +37,23 @@ function M.show_incomplete_line(bufnr, extmark_id, extmark_line, text)
     })
 end
 
+function M.show_streaming_response(bufnr, extmark_id, extmark_line, text)
+    if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+    local lines = vim.split(text, '\n')
+    local virt_lines = {}
+    local indent = display.get_indent(bufnr, extmark_line)
+    for _, line in ipairs(lines) do
+        local wrapped = display.wrap_text(line, indent)
+        for _, wl in ipairs(wrapped) do
+            table.insert(virt_lines, wl)
+        end
+    end
+
+    pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, extmark_line, 0, {
+        id = extmark_id,
+        virt_lines = virt_lines,
+    })
+end
+
 return M

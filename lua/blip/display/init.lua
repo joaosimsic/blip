@@ -16,6 +16,12 @@ function M.wrap_text(text, indent)
     local max_width = math.max(20, vim.fn.winwidth(0) - 2)
     local trimmed = vim.trim(text)
     if trimmed == '' then return virt_lines end
+
+    if trimmed:match('^|') then
+        table.insert(virt_lines, { { indent .. trimmed, 'Comment' } })
+        return virt_lines
+    end
+
     while #trimmed > max_width do
         table.insert(virt_lines, { { indent .. trimmed:sub(1, max_width), 'Comment' } })
         trimmed = trimmed:sub(max_width + 1)
@@ -66,6 +72,7 @@ local actions = require('blip.display.actions')
 
 M.show_response = virtual_text.show_response
 M.show_incomplete_line = virtual_text.show_incomplete_line
+M.show_streaming_response = virtual_text.show_streaming_response
 M.place_line_ref = refs.place_line_ref
 M.update_line_ref = refs.update_line_ref
 M.parse_line_tag = refs.parse_line_tag
