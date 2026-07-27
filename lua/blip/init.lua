@@ -22,7 +22,6 @@ end
 
 function M.ask()
     if not require_deps() then return end
-    print("asdads")
 
     local cfg = config.get()
     if not cfg then
