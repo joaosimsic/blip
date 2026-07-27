@@ -1,0 +1,13 @@
+{
+  "workspace": {
+    "library": ["$VIMRUNTIME"],
+    "checkThirdParty": false
+  },
+  "runtime": {
+    "version": "LuaJIT",
+    "pathStrict": true
+  },
+  "diagnostics": {
+    "globals": ["vim"]
+  }
+}
