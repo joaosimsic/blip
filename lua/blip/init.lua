@@ -5,9 +5,21 @@ local env = require('blip.env')
 local prompt = require('blip.prompt')
 local state = require('blip.state')
 
+local deps_ok = pcall(require, 'plenary.curl')
+if not deps_ok then vim.notify('Blip: missing dependency "plenary.nvim"', vim.log.levels.ERROR, { title = 'Blip' }) end
+
 local M = {}
 
+local function require_deps()
+    if not deps_ok then
+        vim.notify('Blip: missing dependency "plenary.nvim"', vim.log.levels.ERROR, { title = 'Blip' })
+    end
+    return deps_ok
+end
+
 function M.ask()
+    if not require_deps() then return end
+
     local mode = env.get_mode()
 
     if not mode then
@@ -40,11 +52,15 @@ function M.ask()
 end
 
 function M.dismiss()
+    if not require_deps() then return end
     if state.active_cleanup then state.active_cleanup() end
     display.clear()
 end
 
-function M.comment() display.insert_explanations() end
+function M.comment()
+    if not require_deps() then return end
+    display.insert_explanations()
+end
 
 package.loaded['blip'] = M
 return M
