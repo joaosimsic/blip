@@ -15,11 +15,11 @@ function M.find_project_root(bufnr)
     return vim.fn.getcwd()
 end
 
-function M.execute(name, args, project_root)
+function M.execute(name, args, project_root, max_read_lines)
     if name == 'search_code' then
         return search.search_code(args.query, args.max_results or 15, args.include, project_root)
     elseif name == 'read_file_lines' then
-        return read.read_file_lines(args.path, args.start_line, args.end_line, project_root)
+        return read.read_file_lines(args.path, args.start_line, args.end_line, project_root, max_read_lines)
     end
     return "Error: unknown tool '" .. name .. "'"
 end

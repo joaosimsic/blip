@@ -28,6 +28,8 @@ function M.run(opts)
     })
     if not extmark_id then return end
 
+    local cfg = require('blip.config').get() or {}
+
     local state = {
         bufnr = bufnr,
         extmark_id = extmark_id,
@@ -36,7 +38,11 @@ function M.run(opts)
         api_key = api_key,
         project_root = project_root,
         provider = provider,
+        max_tool_calls = cfg.max_tool_calls or 16,
+        max_read_lines = cfg.max_read_lines or 100,
         actions = {},
+        reasoning = nil,
+        tool_call_history = {},
         stream_line_count = 0,
         stream_placed_lines = {},
         stream_active_linenr = nil,

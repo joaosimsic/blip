@@ -28,6 +28,8 @@ function M.setup(opts)
             api_key = p.api_key,
             api_key_env = p.api_key_env,
         },
+        max_tool_calls = opts.max_tool_calls or 16,
+        max_read_lines = opts.max_read_lines or 100,
     }
 end
 

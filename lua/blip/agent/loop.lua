@@ -3,16 +3,16 @@ local display = require('blip.display')
 local api = require('blip.api')
 local tools = require('blip.tools')
 
-local MAX_DEPTH = 8
 local M = {}
 
 local function refresh_display(state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
-    display.show_tool_actions(state.bufnr, state.extmark_id, state.extmark_line, state.actions)
+    display.show_tool_actions(state.bufnr, state.extmark_id, state.extmark_line, state.actions, state.reasoning)
 end
 
 local function add_action(text, state)
     table.insert(state.actions, '  ' .. text)
+    if #state.actions > 5 then table.remove(state.actions, 1) end
     refresh_display(state)
 end
 
@@ -62,6 +62,7 @@ local function handle_tool_calls(tool_calls, messages, state)
         tool_calls = tool_calls,
     })
 
+    local had_repeat = false
     for _, tc in ipairs(tool_calls) do
         add_action(tool_preview(tc), state)
         log.debug('Tool call: ' .. vim.inspect(tc))
@@ -69,7 +70,14 @@ local function handle_tool_calls(tool_calls, messages, state)
         local ok, args = pcall(vim.fn.json_decode, tc['function'].arguments)
         if not ok then args = {} end
 
-        local result = tools.execute(tc['function'].name, args, state.project_root)
+        local sig = tc['function'].name .. '|' .. vim.fn.json_encode(args)
+        if state.tool_call_history[sig] then
+            had_repeat = true
+        else
+            state.tool_call_history[sig] = true
+        end
+
+        local result = tools.execute(tc['function'].name, args, state.project_root, state.max_read_lines)
         log.debug('Tool result (' .. #result .. ' chars): ' .. result:sub(1, 500))
 
         vim.notify(string.format('tool %s: %d chars', tc['function'].name, #result), vim.log.levels.INFO)
@@ -78,6 +86,13 @@ local function handle_tool_calls(tool_calls, messages, state)
             role = 'tool',
             tool_call_id = tc.id,
             content = result,
+        })
+    end
+
+    if had_repeat then
+        table.insert(messages, {
+            role = 'user',
+            content = '[System note: You just repeated one or more tool calls that already returned results. Use the information you already have and provide your answer instead of continuing to search.]',
         })
     end
 end
@@ -151,7 +166,7 @@ end
 
 function M.agent_round(messages, state, depth)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
-    if depth > MAX_DEPTH then
+    if depth >= state.max_tool_calls then
         show_error('Reached maximum tool call depth', state)
         return
     end
@@ -163,6 +178,11 @@ function M.agent_round(messages, state, depth)
     vim.notify(string.format('agent round %d: %d messages', depth + 1, #messages), vim.log.levels.INFO)
 
     api.chat(messages, tools.definitions, state.provider, state.api_key, function(message)
+        if message.reasoning_content then
+            state.reasoning = message.reasoning_content
+            refresh_display(state)
+        end
+
         if message.tool_calls and #message.tool_calls > 0 then
             handle_tool_calls(message.tool_calls, messages, state)
             M.agent_round(messages, state, depth + 1)
