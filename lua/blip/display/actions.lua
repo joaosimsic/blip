@@ -2,12 +2,13 @@ local display = require('blip.display')
 
 local M = {}
 
-function M.show_tool_actions(bufnr, extmark_id, extmark_line, actions, reasoning)
+function M.show_tool_actions(bufnr, extmark_id, extmark_line, actions, reasoning, dots)
     if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
     local indent = display.get_indent(bufnr, extmark_line)
+    local header = 'Thinking' .. string.rep('.', dots or 0)
     local virt_lines = {
-        { { indent .. 'Thinking', 'Comment' } },
+        { { indent .. header, 'Comment' } },
     }
 
     if reasoning then

@@ -19,10 +19,12 @@ function M.build(numbered_code, input)
         .. 'If list_directory or search_code returns no results, the path or symbol likely does not exist. '
         .. 'Do not repeatedly search for the same thing in different ways. '
         .. 'Answer with the information you already have.\n\n'
-        .. 'Response format:\n'
-        .. '- Use L<number>: <explanation> for line-by-line code explanations (one line per reference)\n'
+        .. 'Response format — strict rules:\n'
+        .. '- Each line MUST start with exactly "L<number>:" at column 0.\n'
+        .. '  No prefix, no dashes, no list markers, no markdown bold, no indentation.\n'
+        .. '  Example: L1: This line imports the log module.\n'
         .. '- Use concise plain paragraphs for summaries and general context\n'
-        .. '- Never use markdown formatting (no bold **, no backticks `, no headers ###)\n'
+        .. '- NEVER use markdown formatting of any kind (no **, no backticks, no headers, no lists)\n'
         .. '- No preamble, no greetings, no conclusions'
 
     local user = string.format('Code:\n```\n%s\n```\n\nQuestion: %s', numbered_code, input)

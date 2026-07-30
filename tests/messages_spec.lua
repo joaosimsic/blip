@@ -15,7 +15,7 @@ describe('messages.build', function()
         assert.matches('tools', content)
         assert.matches('line number', content)
         assert.matches('Response format', content)
-        assert.matches('L<number>: <explanation>', content)
+        assert.matches('column 0', content)
         assert.matches('No preamble', content)
     end)
 

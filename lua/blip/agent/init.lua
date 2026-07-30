@@ -48,7 +48,24 @@ function M.run(opts)
         stream_placed_extmark_ids = {},
         stream_active_linenr = nil,
         stream_active_extmark_id = nil,
+        thinking_dots = 0,
+        thinking_stopped = false,
+        thinking_timer = vim.loop.new_timer(),
     }
+
+    state.thinking_timer:start(500, 500, vim.schedule_wrap(function()
+        if state.thinking_stopped or not vim.api.nvim_buf_is_valid(bufnr) then return end
+        state.thinking_dots = (state.thinking_dots % 3) + 1
+        if state.reasoning or #state.actions > 0 then
+            display.show_tool_actions(bufnr, extmark_id, extmark_line, state.actions, state.reasoning, state.thinking_dots)
+        else
+            local text = 'Thinking' .. string.rep('.', state.thinking_dots)
+            pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, extmark_line, 0, {
+                id = extmark_id,
+                virt_lines = { { { display.get_indent(bufnr, extmark_line) .. text, 'Comment' } } },
+            })
+        end
+    end))
 
     local msgs = messages.build(numbered_code, input)
     loop.agent_round(msgs, state, 0)

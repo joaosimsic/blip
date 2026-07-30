@@ -156,7 +156,7 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer, 
 
     if has_refs then
         distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx, extmark_ids)
-    elseif not keep_extmark then
+    else
         distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, extmark_ids)
     end
 end

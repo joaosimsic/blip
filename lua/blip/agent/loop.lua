@@ -5,9 +5,18 @@ local tools = require('blip.tools')
 
 local M = {}
 
+local function stop_thinking(state)
+    state.thinking_stopped = true
+    if state.thinking_timer then
+        state.thinking_timer:stop()
+        state.thinking_timer:close()
+        state.thinking_timer = nil
+    end
+end
+
 local function refresh_display(state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
-    display.show_tool_actions(state.bufnr, state.extmark_id, state.extmark_line, state.actions, state.reasoning)
+    display.show_tool_actions(state.bufnr, state.extmark_id, state.extmark_line, state.actions, state.reasoning, state.thinking_dots)
 end
 
 local function add_action(text, state)
@@ -18,11 +27,13 @@ end
 
 local function show_error(msg, state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
+    stop_thinking(state)
     display.show_response(state.bufnr, state.extmark_id, state.extmark_line, msg)
 end
 
 local function show_final(content, state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
+    stop_thinking(state)
 
     local trimmed = vim.trim(content or '')
     if trimmed == '' then
