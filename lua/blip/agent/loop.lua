@@ -5,16 +5,6 @@ local tools = require('blip.tools')
 
 local M = {}
 
-local function non_ref_lines(text)
-    if not text:find('L%d+:') then return text end
-    local lines = vim.split(text, '\n')
-    local result = {}
-    for _, line in ipairs(lines) do
-        if not line:match('^L%d+:') then table.insert(result, line) end
-    end
-    return table.concat(result, '\n')
-end
-
 local function refresh_display(state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
     display.show_tool_actions(state.bufnr, state.extmark_id, state.extmark_line, state.actions, state.reasoning)
@@ -39,15 +29,6 @@ local function show_final(content, state)
         display.show_response(state.bufnr, state.extmark_id, state.extmark_line, 'Empty response from API')
         return
     end
-
-    if not state.response_extmark_id then
-        local _, id = pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, state.extmark_line, 0, {
-            virt_lines = {},
-        })
-        state.response_extmark_id = id
-    end
-
-    display.show_streaming_response(state.bufnr, state.response_extmark_id, state.extmark_line, non_ref_lines(trimmed))
 
     if trimmed:find('L%d+:') then
         display.distribute_response(
@@ -151,13 +132,6 @@ end
 local function process_stream_delta(accumulated, state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
 
-    if not state.response_extmark_id then
-        local _, id = pcall(vim.api.nvim_buf_set_extmark, state.bufnr, display.ns_id, state.extmark_line, 0, {
-            virt_lines = {},
-        })
-        state.response_extmark_id = id
-    end
-
     local lines = vim.split(accumulated, '\n')
     local ends_with_nl = accumulated:sub(-1) == '\n'
     local complete_count = #lines - 1
@@ -167,13 +141,6 @@ local function process_stream_delta(accumulated, state)
     end
 
     state.stream_line_count = complete_count
-
-    display.show_streaming_response(
-        state.bufnr,
-        state.response_extmark_id,
-        state.extmark_line,
-        non_ref_lines(accumulated)
-    )
 
     if not ends_with_nl then
         local ref, rest = display.parse_line_tag(lines[#lines])

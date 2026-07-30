@@ -43,7 +43,6 @@ function M.run(opts)
         actions = {},
         reasoning = nil,
         tool_call_history = {},
-        response_extmark_id = nil,
         stream_line_count = 0,
         stream_placed_lines = {},
         stream_placed_extmark_ids = {},
