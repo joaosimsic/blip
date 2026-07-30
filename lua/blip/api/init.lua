@@ -71,23 +71,46 @@ function M.chat(messages, tools, provider, api_key, on_success, on_error)
     })
 end
 
-function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_error)
+function M.chat_stream(messages, tools, provider, api_key, on_delta, on_complete, on_error)
     local curl = require('plenary.curl')
 
-    local json_body = vim.fn.json_encode({
+    local body = {
         model = provider.model,
         messages = messages,
         max_tokens = provider.max_tokens,
         stream = true,
-    })
+    }
+    if tools then
+        body.tools = tools
+        body.tool_choice = 'auto'
+    end
+
+    local json_body = vim.fn.json_encode(body)
     log.debug('Request body (stream): ' .. json_body)
 
     local sse_buffer = ''
     local accumulated = ''
+    local reasoning_content = ''
+    local accumulated_tool_calls = {}
     local completed = false
     local first_chunk_logged = false
     local total_bytes = 0
     local seen_valid_sse = false
+
+    local function build_message()
+        local msg = { content = accumulated }
+        if reasoning_content ~= '' then msg.reasoning_content = reasoning_content end
+        if next(accumulated_tool_calls) then
+            local tcs = {}
+            local indices = vim.tbl_keys(accumulated_tool_calls)
+            table.sort(indices)
+            for _, idx in ipairs(indices) do
+                table.insert(tcs, accumulated_tool_calls[idx])
+            end
+            msg.tool_calls = tcs
+        end
+        return msg
+    end
 
     local stream_handler = vim.schedule_wrap(function(err, data)
         if completed then return end
@@ -101,20 +124,51 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
         total_bytes = total_bytes + #data
 
         local done, found_data_line
-        sse_buffer, done, found_data_line = sse.process(sse_buffer, data, function(chunk)
+        sse_buffer, done, found_data_line = sse.process(sse_buffer, data, function(delta)
             seen_valid_sse = true
             if not first_chunk_logged then
-                log.debug('First stream chunk: ' .. tostring(chunk))
+                log.debug('First stream delta: ' .. vim.inspect(delta))
                 first_chunk_logged = true
             end
-            accumulated = accumulated .. chunk
-            on_delta(chunk, accumulated)
+
+            if type(delta.content) == 'string' then
+                accumulated = accumulated .. delta.content
+                on_delta(delta.content, accumulated)
+            end
+
+            if type(delta.reasoning_content) == 'string' then
+                reasoning_content = reasoning_content .. delta.reasoning_content
+            end
+
+            if delta.tool_calls then
+                for _, tc in ipairs(delta.tool_calls) do
+                    local idx = tc.index
+                    if not accumulated_tool_calls[idx] then
+                        accumulated_tool_calls[idx] = {
+                            id = tc.id,
+                            type = tc.type or 'function',
+                            ['function'] = {
+                                name = '',
+                                arguments = '',
+                            },
+                        }
+                    end
+                    if tc['function'] then
+                        if tc['function'].name then
+                            accumulated_tool_calls[idx]['function'].name = accumulated_tool_calls[idx]['function'].name .. tc['function'].name
+                        end
+                        if tc['function'].arguments then
+                            accumulated_tool_calls[idx]['function'].arguments = accumulated_tool_calls[idx]['function'].arguments .. tc['function'].arguments
+                        end
+                    end
+                end
+            end
         end)
         if found_data_line then seen_valid_sse = true end
 
         if done then
             completed = true
-            on_complete(accumulated)
+            on_complete(build_message())
             return
         end
 
@@ -138,7 +192,7 @@ function M.chat_stream(messages, provider, api_key, on_delta, on_complete, on_er
         end
         if vim.trim(accumulated or '') ~= '' then
             log.debug('Stream complete (' .. #accumulated .. ' chars): ' .. accumulated:sub(1, 500))
-            on_complete(accumulated)
+            on_complete(build_message())
         else
             on_error('Empty response from API')
         end

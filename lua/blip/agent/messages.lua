@@ -6,11 +6,8 @@ function M.build(numbered_code, input)
         .. "Use tools when you need additional context beyond what's provided.\n\n"
         .. 'When the user asks about code, search for relevant symbols, imports, definitions, and usages. '
         .. 'Code lines are prefixed with their line number (L<number>:). '
-        .. "Explain each line by referencing its number. "
-        .. "DO NOT include the code line itself in the explanation. "
-        .. 'Skip trivial lines like empty lines, braces, and syntax-only lines unless the question asks about them. '
-        .. 'Also skip lines that already have inline comments or LuaCATS annotations (---@) — '
-        .. 'they are already self-documenting.\n\n'
+        .. "Explain non-obvious intent, design decisions, and gotchas — do not restate the code. "
+        .. "If the code already says what it does, skip it.\n\n"
         .. 'Use list_directory to explore the filesystem and discover file locations. '
         .. 'For example, list_directory("lua/blip") shows the contents of that directory. '
         .. 'Use read_file_lines with filesystem paths relative to project root '
@@ -20,12 +17,19 @@ function M.build(numbered_code, input)
         .. 'Do not repeatedly search for the same thing in different ways. '
         .. 'Answer with the information you already have.\n\n'
         .. 'Response format — strict rules:\n'
-        .. '- Each line MUST start with exactly "L<number>:" at column 0.\n'
-        .. '  No prefix, no dashes, no list markers, no markdown bold, no indentation.\n'
-        .. '  Example: L1: This line imports the log module.\n'
-        .. '- Use concise plain paragraphs for summaries and general context\n'
-        .. '- NEVER use markdown formatting of any kind (no **, no backticks, no headers, no lists)\n'
-        .. '- No preamble, no greetings, no conclusions'
+        .. '- Cover 10-15 lines. For each: explain what the function or logic does,\n'
+        .. '  its role in the overall flow, notable design choices, and non-obvious\n'
+        .. '  edge cases or gotchas.\n'
+        .. '  Self-explanatory — skip these entirely:\n'
+        .. '    * require/import, pcall/xpcall, simple assignments (local x = y)\n'
+        .. '    * error guards (if not x then return/notify)\n'
+        .. '    * package.loaded/return M boilerplate, bare end/else/then\n'
+        .. '    * empty lines, lines with existing comments\n'
+        .. '- Each selected line: "L<number>: phrase fragment" at column 0 on its own line.\n'
+        .. '  One ref per line. No ranges. No inline refs.\n'
+        .. '- Write phrase fragments, never sentences. '
+        .. 'No "This line" or "The function".\n'
+        .. '- No markdown. No preamble. No conclusions.'
 
     local user = string.format('Code:\n```\n%s\n```\n\nQuestion: %s', numbered_code, input)
 

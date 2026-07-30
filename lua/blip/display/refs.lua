@@ -18,11 +18,16 @@ function M.parse_line_tag(line)
     if ref then return tonumber(ref), rest end
     ref, rest = line:match('^L(%d+)%–L%d+:%s*(.*)$')
     if ref then return tonumber(ref), rest end
+    ref, rest = line:match('^L(%d+)%–(%d+):%s*(.*)$')
+    if ref then return tonumber(ref), rest end
     ref, rest = line:match('^L(%d+)%—L%d+:%s*(.*)$')
+    if ref then return tonumber(ref), rest end
+    ref, rest = line:match('^L(%d+)%—(%d+):%s*(.*)$')
     if ref then return tonumber(ref), rest end
     ref, rest = line:match('^L(%d+)%-L%d+:%s*(.*)$')
     if ref then return tonumber(ref), rest end
-    -- L<N>: with markdown bold around the number (e.g., **L1**:
+    ref, rest = line:match('^L(%d+)%-(%d+):%s*(.*)$')
+    if ref then return tonumber(ref), rest end
     ref, rest = line:match('^%s*%*+L(%d+)%*+:%s*(.*)$')
     if ref then return tonumber(ref), rest end
     return nil, nil
@@ -82,12 +87,20 @@ local function parse_response_lines(answer)
     return line_entries, seq_lines, has_refs
 end
 
+local function is_trivial(text)
+    local trimmed = vim.trim(text)
+    return trimmed == '' or trimmed:match('^%d+$') ~= nil
+end
+
 local function store_refs_state(bufnr, line_entries)
     display._last_bufnr = bufnr
     display._last_refs = {}
     for linenr, entry in pairs(line_entries) do
         if #entry > 0 then
-            display._last_refs[linenr] = table.concat(entry, ' ')
+            local text = table.concat(entry, ' ')
+            if not is_trivial(text) then
+                display._last_refs[linenr] = text
+            end
         end
     end
 end
@@ -98,12 +111,20 @@ local function distribute_to_refs(bufnr, line_entries, extmark_ids)
     local chunks = {}
     for linenr, entry in pairs(line_entries) do
         if #entry > 0 then
-            local indent = display.get_indent(bufnr, linenr)
-            local chunk = {}
-            for _, item in ipairs(entry) do
-                table.insert(chunk, { { indent .. item, 'Comment' } })
+            local text = table.concat(entry, ' ')
+            if is_trivial(text) then
+                if extmark_ids and extmark_ids[linenr] then
+                    pcall(vim.api.nvim_buf_del_extmark, bufnr, display.ns_id, extmark_ids[linenr])
+                    extmark_ids[linenr] = nil
+                end
+            else
+                local indent = display.get_indent(bufnr, linenr)
+                local chunk = {}
+                for _, item in ipairs(entry) do
+                    table.insert(chunk, { { indent .. item, 'Comment' } })
+                end
+                chunks[linenr] = chunk
             end
-            chunks[linenr] = chunk
         end
     end
 
@@ -138,7 +159,10 @@ local function distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, ext
             table.insert(items, seq_lines[idx])
             idx = idx + 1
         end
-        if #items > 0 then display._last_refs[linenr] = table.concat(items, ' ') end
+        if #items > 0 then
+            local text = table.concat(items, ' ')
+            if not is_trivial(text) then display._last_refs[linenr] = text end
+        end
         local opts = { virt_lines = chunk }
         if extmark_ids and extmark_ids[linenr] then
             opts.id = extmark_ids[linenr]

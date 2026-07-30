@@ -189,20 +189,26 @@ function M.agent_round(messages, state, depth)
     vim.notify(string.format('agent round %d: %d messages', depth + 1, #messages), vim.log.levels.INFO)
 
     local round_tools = (depth == 0) and nil or tools.definitions
-    api.chat(messages, round_tools, state.provider, state.api_key, function(message)
-        if message.reasoning_content then
-            state.reasoning = message.reasoning_content
-            refresh_display(state)
-        end
+    api.chat_stream(messages, round_tools, state.provider, state.api_key,
+        function(chunk, accumulated)
+            process_stream_delta(accumulated, state)
+        end,
+        function(message)
+            if message.reasoning_content then
+                state.reasoning = message.reasoning_content
+                refresh_display(state)
+            end
 
-        if message.tool_calls and #message.tool_calls > 0 then
-            handle_tool_calls(message.tool_calls, messages, state)
-            M.agent_round(messages, state, depth + 1)
-            return
-        end
+            if message.tool_calls and #message.tool_calls > 0 then
+                handle_tool_calls(message.tool_calls, messages, state)
+                M.agent_round(messages, state, depth + 1)
+                return
+            end
 
-        show_final(message.content or '', state)
-    end, function(err) show_error(err, state) end)
+            show_final(message.content or '', state)
+        end,
+        function(err) show_error(err, state) end
+    )
 end
 
 return M

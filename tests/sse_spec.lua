@@ -2,12 +2,12 @@ local sse = require('blip.api.sse')
 
 describe('sse', function()
     it('parses a single delta event', function()
-        local chunks = {}
+        local deltas = {}
         local data = 'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n'
-        local buffer, done = sse.process('', data, function(chunk)
-            table.insert(chunks, chunk)
+        local buffer, done = sse.process('', data, function(delta)
+            table.insert(deltas, delta)
         end)
-        assert.are.same({ 'Hello' }, chunks)
+        assert.are.same({ { content = 'Hello' } }, deltas)
         assert.is_falsy(done)
     end)
 
@@ -18,55 +18,56 @@ describe('sse', function()
     end)
 
     it('accumulates partial chunks across multiple calls', function()
-        local chunks = {}
+        local deltas = {}
         local buffer = ''
-        buffer = sse.process(buffer, 'data: {"choices":[{"delta":{"content":"Hello"}}]}', function(chunk)
-            table.insert(chunks, chunk)
+        buffer = sse.process(buffer, 'data: {"choices":[{"delta":{"content":"Hello"}}]}', function(delta)
+            table.insert(deltas, delta)
         end)
-        assert.are.same({}, chunks)
-        buffer = sse.process(buffer, '\n\n', function(chunk)
-            table.insert(chunks, chunk)
+        assert.are.same({}, deltas)
+        buffer = sse.process(buffer, '\n\n', function(delta)
+            table.insert(deltas, delta)
         end)
-        assert.are.same({ 'Hello' }, chunks)
+        assert.are.same({ { content = 'Hello' } }, deltas)
     end)
 
     it('handles multiple events in one buffer', function()
-        local chunks = {}
+        local deltas = {}
         local data = 'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: {"choices":[{"delta":{"content":" World"}}]}\n\n'
-        local buffer, done = sse.process('', data, function(chunk)
-            table.insert(chunks, chunk)
+        local buffer, done = sse.process('', data, function(delta)
+            table.insert(deltas, delta)
         end)
-        assert.are.same({ 'Hello', ' World' }, chunks)
+        assert.are.same({ { content = 'Hello' }, { content = ' World' } }, deltas)
         assert.is_falsy(done)
     end)
 
     it('ignores non-data lines', function()
-        local chunks = {}
+        local deltas = {}
         local data = ':comment\n\ndata: {"choices":[{"delta":{"content":"x"}}]}\n\n'
-        local buffer, done = sse.process('', data, function(chunk)
-            table.insert(chunks, chunk)
+        local buffer, done = sse.process('', data, function(delta)
+            table.insert(deltas, delta)
         end)
-        assert.are.same({ 'x' }, chunks)
+        assert.are.same({ { content = 'x' } }, deltas)
         assert.is_falsy(done)
     end)
 
-    it('handles empty delta content', function()
-        local chunks = {}
+    it('handles empty delta object', function()
+        local deltas = {}
         local data = 'data: {"choices":[{"delta":{}}]}\n\n'
-        local buffer, done = sse.process('', data, function(chunk)
-            table.insert(chunks, chunk)
+        local buffer, done = sse.process('', data, function(delta)
+            table.insert(deltas, delta)
         end)
-        assert.are.same({}, chunks)
+        assert.are.same({ {} }, deltas)
         assert.is_falsy(done)
     end)
 
     it('handles null delta content', function()
-        local chunks = {}
+        local deltas = {}
         local data = 'data: {"choices":[{"delta":{"content":null}}]}\n\n'
-        local buffer, done = sse.process('', data, function(chunk)
-            table.insert(chunks, chunk)
+        local buffer, done = sse.process('', data, function(delta)
+            table.insert(deltas, delta)
         end)
-        assert.are.same({}, chunks)
+        assert.equals(1, #deltas)
+        assert.equals(vim.NIL, deltas[1].content)
         assert.is_falsy(done)
     end)
 end)
