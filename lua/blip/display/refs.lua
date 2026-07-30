@@ -82,22 +82,22 @@ local function parse_response_lines(answer)
     return line_entries, seq_lines, has_refs
 end
 
-local function store_refs_state(bufnr, line_entries, start_0idx, end_0idx)
+local function store_refs_state(bufnr, line_entries)
     display._last_bufnr = bufnr
     display._last_refs = {}
     for linenr, entry in pairs(line_entries) do
-        if linenr >= start_0idx and linenr <= end_0idx and #entry > 0 then
+        if #entry > 0 then
             display._last_refs[linenr] = table.concat(entry, ' ')
         end
     end
 end
 
-local function distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx, extmark_ids)
-    store_refs_state(bufnr, line_entries, start_0idx, end_0idx)
+local function distribute_to_refs(bufnr, line_entries, extmark_ids)
+    store_refs_state(bufnr, line_entries)
 
     local chunks = {}
     for linenr, entry in pairs(line_entries) do
-        if linenr >= start_0idx and linenr <= end_0idx and #entry > 0 then
+        if #entry > 0 then
             local indent = display.get_indent(bufnr, linenr)
             local chunk = {}
             for _, item in ipairs(entry) do
@@ -155,7 +155,17 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer, 
     local line_entries, seq_lines, has_refs = parse_response_lines(answer)
 
     if has_refs then
-        distribute_to_refs(bufnr, line_entries, start_0idx, end_0idx, extmark_ids)
+        distribute_to_refs(bufnr, line_entries, extmark_ids)
+        if #seq_lines > 0 then
+            local indent = display.get_indent(bufnr, end_0idx)
+            local chunk = {}
+            for _, item in ipairs(seq_lines) do
+                table.insert(chunk, { { indent .. item, 'Comment' } })
+            end
+            pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, end_0idx, 0, {
+                virt_lines = chunk,
+            })
+        end
     else
         distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, extmark_ids)
     end

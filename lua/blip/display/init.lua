@@ -41,7 +41,10 @@ end
 local function line_has_comment(bufnr, linenr_0idx)
     local line = vim.api.nvim_buf_get_lines(bufnr, linenr_0idx, linenr_0idx + 1, false)[1]
     if not line then return false end
-    return line:find('%-%-') ~= nil
+    local cs = vim.bo.commentstring
+    local prefix = (cs and cs ~= '') and cs:match('^(.-)%s*%%s') or nil
+    if not prefix then prefix = '--' end
+    return line:find(vim.pesc(prefix), 1, true) ~= nil
 end
 
 function M.insert_explanations()
