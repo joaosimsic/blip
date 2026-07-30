@@ -60,6 +60,8 @@ local function show_final(content, state)
             state.stream_placed_extmark_ids
         )
     end
+
+    pcall(vim.api.nvim_buf_del_extmark, state.bufnr, display.ns_id, state.extmark_id)
 end
 
 local function tool_preview(tc)
