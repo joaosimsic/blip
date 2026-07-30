@@ -189,26 +189,7 @@ function M.agent_round(messages, state, depth)
             return
         end
 
-        api.chat_stream(
-            messages,
-            state.provider,
-            state.api_key,
-            function(_, accumulated) process_stream_delta(accumulated, state) end,
-            function(full_content) show_final(full_content, state) end,
-            function(err)
-                log.debug('Stream failed, falling back to non-streaming: ' .. tostring(err))
-                api.chat(
-                    messages,
-                    nil,
-                    state.provider,
-                    state.api_key,
-                    function(message) show_final(message.content or '', state) end,
-                    function(err2)
-                        show_error('Stream failed (' .. err .. '); fallback also failed (' .. err2 .. ')', state)
-                    end
-                )
-            end
-        )
+        show_final(message.content or '', state)
     end, function(err) show_error(err, state) end)
 end
 
