@@ -1,5 +1,7 @@
 # blip
 
+![blip preview](preview/preview.gif)
+
 Blip is a Neovim plugin that explains the code under your cursor (or your visual
 selection) using an OpenAI-compatible chat API. It streams the answer inline as
 virtual text next to the relevant lines, powered by an agent loop that can search
