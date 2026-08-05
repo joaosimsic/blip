@@ -24,8 +24,8 @@ function M.start(opts)
     })
 
     local input_line = extmark_line + 1
-    vim.api.nvim_buf_set_lines(bufnr, input_line, input_line, false, { indent })
-    vim.api.nvim_win_set_cursor(0, { input_line + 1, #indent })
+    vim.api.nvim_buf_set_lines(bufnr, input_line, input_line, false, { indent .. ' ' })
+    vim.api.nvim_win_set_cursor(0, { input_line + 1, #indent + 1 })
 
     local submitting = false
     local canceling = false
