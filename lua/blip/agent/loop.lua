@@ -42,6 +42,9 @@ local function show_final(content, state)
     end
 
     if trimmed:find('L%d+:') then
+        if state.stream_active_linenr and state.stream_active_extmark_id then
+            state.stream_placed_extmark_ids[state.stream_active_linenr] = state.stream_active_extmark_id
+        end
         display.distribute_response(
             state.bufnr,
             state.extmark_id,
@@ -140,6 +143,9 @@ end
 
 local function clear_active_line(state)
     if not state.stream_active_linenr then return end
+    if state.stream_active_extmark_id then
+        state.stream_placed_extmark_ids[state.stream_active_linenr] = state.stream_active_extmark_id
+    end
     state.stream_active_linenr = nil
     state.stream_active_extmark_id = nil
 end

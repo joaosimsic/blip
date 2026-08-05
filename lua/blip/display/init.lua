@@ -34,7 +34,9 @@ function M.clear() vim.api.nvim_buf_clear_namespace(0, M.ns_id, 0, -1) end
 
 local function comment_line(text)
     local cs = vim.bo.commentstring
-    if cs and cs ~= '' and cs:find('%%s') then return cs:gsub('%%s', text) end
+    if cs and cs ~= '' and cs:find('%%s') then
+        return cs:gsub('%%s', function() return text end)
+    end
     return '-- ' .. text
 end
 

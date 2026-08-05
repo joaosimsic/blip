@@ -98,9 +98,7 @@ local function store_refs_state(bufnr, line_entries)
     for linenr, entry in pairs(line_entries) do
         if #entry > 0 then
             local text = table.concat(entry, ' ')
-            if not is_trivial(text) then
-                display._last_refs[linenr] = text
-            end
+            if not is_trivial(text) then display._last_refs[linenr] = text end
         end
     end
 end
@@ -131,9 +129,7 @@ local function distribute_to_refs(bufnr, line_entries, extmark_ids)
     for linenr, chunk in pairs(chunks) do
         if #chunk > 0 then
             local opts = { virt_lines = chunk }
-            if extmark_ids and extmark_ids[linenr] then
-                opts.id = extmark_ids[linenr]
-            end
+            if extmark_ids and extmark_ids[linenr] then opts.id = extmark_ids[linenr] end
             vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, linenr, 0, opts)
         end
     end
@@ -164,9 +160,7 @@ local function distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, ext
             if not is_trivial(text) then display._last_refs[linenr] = text end
         end
         local opts = { virt_lines = chunk }
-        if extmark_ids and extmark_ids[linenr] then
-            opts.id = extmark_ids[linenr]
-        end
+        if extmark_ids and extmark_ids[linenr] then opts.id = extmark_ids[linenr] end
         vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, linenr, 0, opts)
     end
 end
@@ -179,17 +173,13 @@ function M.distribute_response(bufnr, extmark_id, start_0idx, end_0idx, answer, 
     local line_entries, seq_lines, has_refs = parse_response_lines(answer)
 
     if has_refs then
-        distribute_to_refs(bufnr, line_entries, extmark_ids)
         if #seq_lines > 0 then
-            local indent = display.get_indent(bufnr, end_0idx)
-            local chunk = {}
+            if not line_entries[end_0idx] then line_entries[end_0idx] = {} end
             for _, item in ipairs(seq_lines) do
-                table.insert(chunk, { { indent .. item, 'Comment' } })
+                table.insert(line_entries[end_0idx], item)
             end
-            pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, end_0idx, 0, {
-                virt_lines = chunk,
-            })
         end
+        distribute_to_refs(bufnr, line_entries, extmark_ids)
     else
         distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, extmark_ids)
     end
