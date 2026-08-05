@@ -17,13 +17,10 @@ function M.build(numbered_code, input)
         .. 'Do not repeatedly search for the same thing in different ways. '
         .. 'Answer with the information you already have.\n\n'
         .. 'Response format — strict rules:\n'
-        .. '- Cover 15-25 lines. For each: explain what the function or logic does,\n'
-        .. '  its role in the overall flow, notable design choices, and non-obvious\n'
-        .. '  edge cases or gotchas.\n'
         .. '- Each selected line: "L<number>: phrase fragment" at column 0 on its own line.\n'
         .. '  One ref per line. No ranges. No inline refs.\n'
-        .. '- Write phrase fragments, never sentences. '
-        .. 'No "This line" or "The function".\n'
+        .. '- Keep each line to one brief sentence. '
+        .. 'Start directly with the explanation — no "This line" filler.\n'
         .. '- No markdown. No preamble. No conclusions.'
 
     local user = string.format('Code:\n```\n%s\n```\n\nQuestion: %s', numbered_code, input)
