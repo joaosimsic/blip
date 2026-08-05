@@ -34,7 +34,6 @@ function M.ask()
     end
 
     local mode = env.get_mode()
-    -- mode determines selection strategy — "n" uses cursor line, "v" uses visual selection (marks `'<`/`'>`), and unsupported modes abort early.
     log.debug('Mode: ' .. tostring(mode))
 
     if not mode then
@@ -47,7 +46,6 @@ function M.ask()
     local start_line, end_line = editor.get_section(bufnr, mode)
     log.debug('Selection: lines ' .. start_line .. '-' .. end_line)
     local extmark_line = math.min(end_line - 1, math.max(0, line_count - 1))
-    -- extmark position is `end_line - 1` (0-indexed last line) clamped to `[0, line_count-1]`; this is defensive against edge cases where the selection could conceptually exceed buffer bounds.
 
     local buf_lines = vim.api.nvim_buf_get_lines(bufnr, start_line - 1, end_line, false)
     local numbered_code = editor.number_lines(buf_lines, start_line)
@@ -72,7 +70,6 @@ end
 function M.dismiss()
     if not require_deps() then return end
     if state.active_cleanup then state.active_cleanup() end
-    -- `state.active_cleanup` is a mutable function reference set by `prompt.start()`; `dismiss()` invokes it if non-nil, decoupling the main module from the prompt lifecycle without requiring a  direct callback registration.
     display.clear()
 end
 

@@ -62,11 +62,13 @@ local function tool_preview(tc)
     if not ok then args = {} end
 
     if tc['function'].name == 'search_code' then
-        return tc['function'].name .. '("' .. (args.query or '?') .. '")'
+        return 'search "' .. (args.query or '?') .. '"'
     elseif tc['function'].name == 'read_file_lines' then
-        local preview = tc['function'].name .. '(' .. (args.path or '?')
+        local preview = 'read ' .. (args.path or '?')
         if args.start_line then preview = preview .. ':' .. args.start_line end
-        return preview .. ')'
+        return preview
+    elseif tc['function'].name == 'list_directory' then
+        return 'list ' .. (args.path or '?') .. '/'
     end
     return tc['function'].name .. '(...)'
 end
@@ -96,7 +98,8 @@ local function handle_tool_calls(tool_calls, messages, state)
         local result = tools.execute(tc['function'].name, args, state.project_root, state.max_read_lines)
         log.debug('Tool result (' .. #result .. ' chars): ' .. result:sub(1, 500))
 
-        vim.notify(string.format('tool %s: %d chars', tc['function'].name, #result), vim.log.levels.INFO)
+        local display_names = { search_code = 'search', read_file_lines = 'read', list_directory = 'list' }
+        vim.notify(string.format('%s: %d chars', display_names[tc['function'].name] or tc['function'].name, #result), vim.log.levels.INFO)
 
         table.insert(messages, {
             role = 'tool',
@@ -188,7 +191,7 @@ function M.agent_round(messages, state, depth)
 
     vim.notify(string.format('agent round %d: %d messages', depth + 1, #messages), vim.log.levels.INFO)
 
-    local round_tools = (depth == 0) and nil or tools.definitions
+    local round_tools = tools.definitions
     api.chat_stream(messages, round_tools, state.provider, state.api_key,
         function(chunk, accumulated)
             process_stream_delta(accumulated, state)
