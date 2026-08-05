@@ -12,11 +12,25 @@ local function stop_thinking(state)
         state.thinking_timer:close()
         state.thinking_timer = nil
     end
+    if state.has_padding_line and state.bufnr and vim.api.nvim_buf_is_valid(state.bufnr) then
+        local last_line = vim.api.nvim_buf_line_count(state.bufnr) - 1
+        local line_content = vim.api.nvim_buf_get_lines(state.bufnr, last_line, last_line + 1, false)[1] or ''
+        if line_content == '' then
+            pcall(vim.api.nvim_buf_set_lines, state.bufnr, last_line, last_line + 1, false, {})
+        end
+    end
 end
 
 local function refresh_display(state)
     if not vim.api.nvim_buf_is_valid(state.bufnr) then return end
-    display.show_tool_actions(state.bufnr, state.extmark_id, state.extmark_line, state.actions, state.reasoning, state.thinking_dots)
+    display.show_tool_actions(
+        state.bufnr,
+        state.extmark_id,
+        state.extmark_line,
+        state.actions,
+        state.reasoning,
+        state.thinking_dots
+    )
 end
 
 local function add_action(text, state)
@@ -102,7 +116,10 @@ local function handle_tool_calls(tool_calls, messages, state)
         log.debug('Tool result (' .. #result .. ' chars): ' .. result:sub(1, 500))
 
         local display_names = { search_code = 'search', read_file_lines = 'read', list_directory = 'list' }
-        vim.notify(string.format('%s: %d chars', display_names[tc['function'].name] or tc['function'].name, #result), vim.log.levels.INFO)
+        vim.notify(
+            string.format('%s: %d chars', display_names[tc['function'].name] or tc['function'].name, #result),
+            vim.log.levels.INFO
+        )
 
         table.insert(messages, {
             role = 'tool',
@@ -198,10 +215,12 @@ function M.agent_round(messages, state, depth)
     vim.notify(string.format('agent round %d: %d messages', depth + 1, #messages), vim.log.levels.INFO)
 
     local round_tools = tools.definitions
-    api.chat_stream(messages, round_tools, state.provider, state.api_key,
-        function(chunk, accumulated)
-            process_stream_delta(accumulated, state)
-        end,
+    api.chat_stream(
+        messages,
+        round_tools,
+        state.provider,
+        state.api_key,
+        function(chunk, accumulated) process_stream_delta(accumulated, state) end,
         function(message)
             if message.reasoning_content then
                 state.reasoning = message.reasoning_content

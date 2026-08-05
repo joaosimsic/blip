@@ -30,6 +30,7 @@
 ---@field stream_placed_lines table<integer,boolean>
 ---@field stream_active_linenr integer?
 ---@field stream_active_extmark_id integer?
+---@field has_padding_line boolean?
 
 ---@class BlipToolCall
 ---@field id string
