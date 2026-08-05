@@ -2,22 +2,31 @@
 
 ![blip preview](preview/preview.gif)
 
-Blip is a Neovim plugin that explains the code under your cursor (or your visual
-selection) using an OpenAI-compatible chat API. It streams the answer inline as
-virtual text next to the relevant lines, powered by an agent loop that can search
-and read your codebase with tools.
+Blip is a tiny Neovim plugin for asking quick questions about the code under
+your cursor. No chat buffers, no sessions, no state to manage — type a question,
+read the answer streamed inline next to the relevant lines, dismiss it, and get
+back to work.
 
-- Inline, streaming explanations — no separate buffer or popup to manage
-- Works on the current line (normal mode) or a visual selection
-- Agent loop with codebase tools: `search_code`, `read_file_lines`, `list_directory`
-- Insert explanations directly into your buffer as comments
+- Minimal by design — `ask`, `dismiss`, and an optional `comment`
+- Stateless — no sessions, no history, no buffers to clean up
+- Your files stay clean — answers render as virtual text (extmarks)
+- Works on a single line (normal mode) or a visual selection
+- Can look around your codebase when it needs to
 - Works with any OpenAI-compatible endpoint (OpenAI, Ollama, vLLM, ...)
+
+## Why extmarks?
+
+Blip's whole point is to ask a question and move on. By rendering answers as
+virtual text, explanations never dirty your tracked files — no generated
+comment lines, no git noise. `dismiss` wipes everything and your buffer is
+exactly as you left it. The only time Blip touches your buffer is when you
+explicitly ask it to with `comment()`.
 
 ## Requirements
 
 - Neovim **0.10+**
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) (required, for `plenary.curl`)
-- `rg` (ripgrep) on your `PATH` (used by the `search_code` tool)
+- `rg` (ripgrep) on your `PATH`
 - An API key for an OpenAI-compatible chat completions endpoint
 
 ## Installation
@@ -65,8 +74,8 @@ Call `setup()` exactly once with a `provider` table. The only required fields ar
 | `provider.model` | `string` | — | Model identifier, e.g. `gpt-4o-mini` |
 | `provider.max_tokens` | `integer` | `8192` | Max tokens per request |
 | `provider.api_key` | `string?` | `nil` | API key. Takes precedence over `api_key_env` if both are set |
-| `provider.api_key_env` | `string?` | `nil` | Env var holding the API key. Used as a fallback when `api_key` is not set |
-| `max_tool_calls` | `integer` | `16` | Max agent tool-call rounds before giving up |
+| `provider.api_key_env` | `string?` | `nil` | Env var holding the API key. Fallback when `api_key` is not set |
+| `max_tool_calls` | `integer` | `16` | Max rounds of codebase lookups before giving up |
 | `max_read_lines` | `integer` | `100` | Default line range cap for `read_file_lines` |
 | `debug` | `boolean` | `false` | Enable verbose `[Blip]` debug notifications |
 
@@ -131,12 +140,11 @@ require('blip').setup({
 ## Usage
 
 1. Put your cursor on a line (normal mode) or make a visual selection.
-2. Run `:lua require('blip').ask()` (bind it to a key, see below).
+2. Run `:lua require('blip').ask()` (bind it to a key, see above).
 3. A `Prompt:` line appears inline — type your question and press `<CR>`.
 4. The model streams its answer as virtual text next to the relevant lines.
    Press `<C-c>` during the prompt to cancel.
-5. Optional: `:lua require('blip').comment()` inserts the explanations as real
-   comments in the buffer. `:lua require('blip').dismiss()` clears all virtual text.
+5. When you're done, `:lua require('blip').dismiss()` clears all virtual text.
 
 ### Response format
 
@@ -144,16 +152,18 @@ The model addresses each explained line with a `L<line>: explanation` tag. Lines
 matching that format are rendered next to their numbered source line; anything
 else is distributed sequentially across the selection.
 
-### Tools
+### Codebase lookups
 
-During a round, the model may use these tools (they only run inside your
-project root, which is resolved from the current buffer's git root or `cwd`):
+When a question needs more context, the model can search and read your codebase
+with a few tools (`search_code`, `read_file_lines`, `list_directory`). These
+only run inside your project root, resolved from the current buffer's git root
+or `cwd`.
 
-| Tool | Description |
-| --- | --- |
-| `list_directory` | List files/directories at a path relative to the project root |
-| `search_code` | Ripgrep search; returns `file:line:content` results |
-| `read_file_lines` | Read a line range from a file (path fallbacks for Lua `init.lua` variants) |
+### Committing explanations
+
+By default Blip never writes to your files. If you want the explanations to
+stick, `:lua require('blip').comment()` inserts them as real comments in the
+buffer (skipping lines that already have one).
 
 ## Health
 
