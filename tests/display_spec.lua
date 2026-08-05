@@ -7,11 +7,13 @@ describe('display', function()
         package.loaded['blip.display.refs'] = nil
         package.loaded['blip.display.actions'] = nil
         vim.fn.winwidth = function() return 80 end
+        vim.fn.getwininfo = function() return { { textoff = 2 } } end
         display = require('blip.display')
     end)
 
     after_each(function()
         vim.fn.winwidth = nil
+        vim.fn.getwininfo = nil
     end)
 
     describe('wrap_text', function()

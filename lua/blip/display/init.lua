@@ -11,11 +11,17 @@ function M.get_indent(bufnr, linenr)
     return line:match('^(%s*)') or ''
 end
 
+function M.text_area_width()
+    local wininfo = vim.fn.getwininfo(vim.api.nvim_get_current_win())[1]
+    local textoff = (wininfo and wininfo.textoff) or 2
+    return math.max(20, vim.fn.winwidth(0) - textoff)
+end
+
 function M.wrap_text(text, indent)
     indent = indent or ''
     local virt_lines = {}
-    local indent_len = #indent
-    local max_width = math.max(20, vim.fn.winwidth(0) - 2 - indent_len)
+    local indent_len = vim.fn.strdisplaywidth(indent)
+    local max_width = math.max(20, M.text_area_width() - indent_len)
     local trimmed = vim.trim(text)
     if trimmed == '' then return virt_lines end
 

@@ -3,7 +3,7 @@ local display = require('blip.display')
 local M = {}
 
 local function wrap_and_add(list, text)
-    local max_width = math.max(20, vim.fn.winwidth(0) - 2)
+    local max_width = display.text_area_width()
     local trimmed = vim.trim(text)
     if trimmed == '' then return end
     while #trimmed > max_width do
