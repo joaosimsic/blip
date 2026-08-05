@@ -118,8 +118,10 @@ local function distribute_to_refs(bufnr, line_entries, extmark_ids)
             else
                 local indent = display.get_indent(bufnr, linenr)
                 local chunk = {}
-                for _, item in ipairs(entry) do
-                    table.insert(chunk, { { indent .. item, 'Comment' } })
+                local text = table.concat(entry, ' ')
+                local wrapped = display.wrap_text(text, indent)
+                for _, wl in ipairs(wrapped) do
+                    table.insert(chunk, wl)
                 end
                 chunks[linenr] = chunk
             end
@@ -151,7 +153,10 @@ local function distribute_sequential(bufnr, start_0idx, end_0idx, seq_lines, ext
         local items = {}
         for _ = 1, lines_per_source do
             if idx > #seq_lines then break end
-            table.insert(chunk, { { indent .. seq_lines[idx], 'Comment' } })
+            local wrapped = display.wrap_text(seq_lines[idx], indent)
+            for _, wl in ipairs(wrapped) do
+                table.insert(chunk, wl)
+            end
             table.insert(items, seq_lines[idx])
             idx = idx + 1
         end

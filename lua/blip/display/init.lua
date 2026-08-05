@@ -12,8 +12,10 @@ function M.get_indent(bufnr, linenr)
 end
 
 function M.wrap_text(text, indent)
+    indent = indent or ''
     local virt_lines = {}
-    local max_width = math.max(20, vim.fn.winwidth(0) - 2)
+    local indent_len = #indent
+    local max_width = math.max(20, vim.fn.winwidth(0) - 2 - indent_len)
     local trimmed = vim.trim(text)
     if trimmed == '' then return virt_lines end
 
