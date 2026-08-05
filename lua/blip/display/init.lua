@@ -1,3 +1,5 @@
+local log = require('blip.log')
+
 local M = {}
 package.loaded['blip.display'] = M
 
@@ -84,7 +86,7 @@ function M.insert_explanations()
         end
     end
     vim.api.nvim_buf_clear_namespace(bufnr, M.ns_id, 0, -1)
-    vim.notify(string.format('Blip: inserted %d explanation line(s)', count))
+    log.debug(string.format('Blip: inserted %d explanation line(s)', count))
 end
 
 local virtual_text = require('blip.display.virtual_text')

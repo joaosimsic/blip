@@ -38,7 +38,7 @@ function M.chat(messages, tools, provider, api_key, on_success, on_error)
     local json_body = vim.fn.json_encode(body)
     log.debug('Request body: ' .. json_body)
 
-    vim.notify(string.format('chat: %d messages, tools=%s', #messages, tostring(tools ~= nil)), vim.log.levels.INFO)
+    log.debug(string.format('chat: %d messages, tools=%s', #messages, tostring(tools ~= nil)))
 
     curl.request({
         url = provider.base_url .. '/chat/completions',

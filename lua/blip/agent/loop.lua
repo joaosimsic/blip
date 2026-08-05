@@ -116,9 +116,8 @@ local function handle_tool_calls(tool_calls, messages, state)
         log.debug('Tool result (' .. #result .. ' chars): ' .. result:sub(1, 500))
 
         local display_names = { search_code = 'search', read_file_lines = 'read', list_directory = 'list' }
-        vim.notify(
-            string.format('%s: %d chars', display_names[tc['function'].name] or tc['function'].name, #result),
-            vim.log.levels.INFO
+        log.debug(
+            string.format('%s: %d chars', display_names[tc['function'].name] or tc['function'].name, #result)
         )
 
         table.insert(messages, {
@@ -212,7 +211,7 @@ function M.agent_round(messages, state, depth)
     if #msgs_str > 2000 then msgs_str = msgs_str:sub(1, 2000) .. '... (truncated)' end
     log.debug('Messages round ' .. (depth + 1) .. ' (' .. #messages .. '): ' .. msgs_str)
 
-    vim.notify(string.format('agent round %d: %d messages', depth + 1, #messages), vim.log.levels.INFO)
+    log.debug(string.format('agent round %d: %d messages', depth + 1, #messages))
 
     local round_tools = tools.definitions
     api.chat_stream(
