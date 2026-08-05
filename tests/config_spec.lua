@@ -6,15 +6,11 @@ describe('config', function()
         config = require('blip.config')
     end)
 
-    it('returns nil before setup', function()
-        assert.is_nil(config.get())
-    end)
+    it('returns nil before setup', function() assert.is_nil(config.get()) end)
 
     it('notifies error when setup is called without arguments', function()
         local msgs = {}
-        vim.notify = function(msg, level)
-            table.insert(msgs, { msg = msg, level = level })
-        end
+        vim.notify = function(msg, level) table.insert(msgs, { msg = msg, level = level }) end
         config.setup(nil)
         assert.equals(1, #msgs)
         assert.equals(vim.log.levels.ERROR, msgs[1].level)
@@ -22,9 +18,7 @@ describe('config', function()
 
     it('notifies error when provider has no base_url', function()
         local msgs = {}
-        vim.notify = function(msg, level)
-            table.insert(msgs, { msg = msg, level = level })
-        end
+        vim.notify = function(msg, level) table.insert(msgs, { msg = msg, level = level }) end
         config.setup({ provider = { model = 'gpt-4', api_key = 'sk-test' } })
         assert.equals(1, #msgs)
         assert.equals(vim.log.levels.ERROR, msgs[1].level)
@@ -32,9 +26,7 @@ describe('config', function()
 
     it('notifies error when provider has no model', function()
         local msgs = {}
-        vim.notify = function(msg, level)
-            table.insert(msgs, { msg = msg, level = level })
-        end
+        vim.notify = function(msg, level) table.insert(msgs, { msg = msg, level = level }) end
         config.setup({ provider = { base_url = 'https://example.com', api_key = 'sk-test' } })
         assert.equals(1, #msgs)
         assert.equals(vim.log.levels.ERROR, msgs[1].level)
@@ -42,9 +34,7 @@ describe('config', function()
 
     it('notifies error when provider has no api_key or api_key_env', function()
         local msgs = {}
-        vim.notify = function(msg, level)
-            table.insert(msgs, { msg = msg, level = level })
-        end
+        vim.notify = function(msg, level) table.insert(msgs, { msg = msg, level = level }) end
         config.setup({ provider = { base_url = 'https://example.com', model = 'gpt-4' } })
         assert.equals(1, #msgs)
         assert.equals(vim.log.levels.ERROR, msgs[1].level)

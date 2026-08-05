@@ -116,9 +116,7 @@ local function handle_tool_calls(tool_calls, messages, state)
         log.debug('Tool result (' .. #result .. ' chars): ' .. result:sub(1, 500))
 
         local display_names = { search_code = 'search', read_file_lines = 'read', list_directory = 'list' }
-        log.debug(
-            string.format('%s: %d chars', display_names[tc['function'].name] or tc['function'].name, #result)
-        )
+        log.debug(string.format('%s: %d chars', display_names[tc['function'].name] or tc['function'].name, #result))
 
         table.insert(messages, {
             role = 'tool',

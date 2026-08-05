@@ -4,9 +4,7 @@ local M = {}
 
 local function try_read(full_path)
     local ok, lines = pcall(vim.fn.readfile, full_path)
-    if ok and type(lines) == 'table' and #lines > 0 then
-        return lines
-    end
+    if ok and type(lines) == 'table' and #lines > 0 then return lines end
     return nil
 end
 
@@ -20,9 +18,7 @@ local function resolve_path(path, project_root)
 
     if path:match('%.lua$') then
         local alt = path:gsub('([^/]+)%.lua$', '%1/init.lua')
-        if alt ~= path then
-            table.insert(attempts, project_root .. '/' .. alt:gsub('^%.?/+', ''))
-        end
+        if alt ~= path then table.insert(attempts, project_root .. '/' .. alt:gsub('^%.?/+', '')) end
     end
 
     if path:match('/init%.lua$') then
@@ -38,7 +34,12 @@ local function resolve_path(path, project_root)
     for _, alt in ipairs(attempts) do
         lines = try_read(alt)
         if lines then
-            log.debug('read_file_lines fallback: ' .. path .. ' -> ' .. alt:gsub('^.*/' .. vim.fn.fnamemodify(project_root, ':t') .. '/', ''))
+            log.debug(
+                'read_file_lines fallback: '
+                    .. path
+                    .. ' -> '
+                    .. alt:gsub('^.*/' .. vim.fn.fnamemodify(project_root, ':t') .. '/', '')
+            )
             return alt, lines
         end
     end

@@ -5,9 +5,7 @@ local function process_event_line(line, on_chunk)
     if not payload then return false end
     if payload == '[DONE]' then return true end
     local ok, json = pcall(vim.fn.json_decode, payload)
-    if ok and json.choices and json.choices[1] and json.choices[1].delta then
-        on_chunk(json.choices[1].delta)
-    end
+    if ok and json.choices and json.choices[1] and json.choices[1].delta then on_chunk(json.choices[1].delta) end
     return false
 end
 

@@ -5,9 +5,7 @@ function M.list_directory(path, project_root)
     full_path = project_root .. '/' .. full_path
 
     local ok, entries = pcall(vim.fn.readdir, full_path)
-    if not ok or type(entries) ~= 'table' then
-        return "Error: could not list directory '" .. path .. "'"
-    end
+    if not ok or type(entries) ~= 'table' then return "Error: could not list directory '" .. path .. "'" end
 
     table.sort(entries)
     local result = {}

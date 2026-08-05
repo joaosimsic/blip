@@ -17,13 +17,9 @@ describe('display', function()
     end)
 
     describe('wrap_text', function()
-        it('returns empty for empty string', function()
-            assert.are.same({}, display.wrap_text('', ''))
-        end)
+        it('returns empty for empty string', function() assert.are.same({}, display.wrap_text('', '')) end)
 
-        it('returns empty for whitespace only', function()
-            assert.are.same({}, display.wrap_text('   ', ''))
-        end)
+        it('returns empty for whitespace only', function() assert.are.same({}, display.wrap_text('   ', '')) end)
 
         it('wraps short text in a single chunk with Comment hl group', function()
             local result = display.wrap_text('hello', '')
@@ -46,8 +42,7 @@ describe('display', function()
             local text = '| col1 | col2 | ' .. string.rep('x', 200) .. ' |'
             local result = display.wrap_text(text, '')
             assert.equals(1, #result)
-            assert.is_true(#result[1][1][1] > 78,
-                'table line should not be wrapped, got length ' .. #result[1][1][1])
+            assert.is_true(#result[1][1][1] > 78, 'table line should not be wrapped, got length ' .. #result[1][1][1])
         end)
 
         it('reduces max_width when indent is provided', function()
@@ -78,16 +73,12 @@ describe('display', function()
                 '    end',
             })
 
-            local extmark_id = vim.api.nvim_buf_set_extmark(
-                bufnr, display.ns_id, 0, 0, {}
-            )
+            local extmark_id = vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, 0, 0, {})
 
             local long_text = string.rep('explanation ', 20)
             display.show_response(bufnr, extmark_id, 0, long_text)
 
-            local extmarks = vim.api.nvim_buf_get_extmarks(
-                bufnr, display.ns_id, 0, -1, { details = true }
-            )
+            local extmarks = vim.api.nvim_buf_get_extmarks(bufnr, display.ns_id, 0, -1, { details = true })
 
             local found = false
             for _, em in ipairs(extmarks) do
@@ -103,8 +94,7 @@ describe('display', function()
                             full_text = full_text .. s[1]
                             assert.equals('Comment', s[2])
                         end
-                        assert.is_true(#full_text <= 80,
-                            'virt_line too long: ' .. #full_text .. ' chars')
+                        assert.is_true(#full_text <= 80, 'virt_line too long: ' .. #full_text .. ' chars')
                     end
                 end
             end
@@ -123,17 +113,12 @@ describe('display', function()
             end
             vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
 
-            local extmark_id = vim.api.nvim_buf_set_extmark(
-                bufnr, display.ns_id, 0, 0, {}
-            )
+            local extmark_id = vim.api.nvim_buf_set_extmark(bufnr, display.ns_id, 0, 0, {})
 
-            local answer = 'L1: ' .. string.rep('x', 200) .. '\n'
-                .. 'L3: ' .. string.rep('y', 150)
+            local answer = 'L1: ' .. string.rep('x', 200) .. '\n' .. 'L3: ' .. string.rep('y', 150)
             display.distribute_response(bufnr, extmark_id, 0, 4, answer, false, {})
 
-            local extmarks = vim.api.nvim_buf_get_extmarks(
-                bufnr, display.ns_id, 0, -1, { details = true }
-            )
+            local extmarks = vim.api.nvim_buf_get_extmarks(bufnr, display.ns_id, 0, -1, { details = true })
 
             local found = { [0] = false, [2] = false }
             for _, em in ipairs(extmarks) do
@@ -147,8 +132,7 @@ describe('display', function()
                         for _, seg in ipairs(line) do
                             full_text = full_text .. seg[1]
                         end
-                        assert.is_true(#full_text <= 80,
-                            'virt_line on row 0 too long: ' .. #full_text)
+                        assert.is_true(#full_text <= 80, 'virt_line on row 0 too long: ' .. #full_text)
                     end
                 elseif row == 2 then
                     found[2] = true
@@ -158,8 +142,7 @@ describe('display', function()
                         for _, seg in ipairs(line) do
                             full_text = full_text .. seg[1]
                         end
-                        assert.is_true(#full_text <= 80,
-                            'virt_line on row 2 too long: ' .. #full_text)
+                        assert.is_true(#full_text <= 80, 'virt_line on row 2 too long: ' .. #full_text)
                     end
                 end
             end

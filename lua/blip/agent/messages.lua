@@ -8,9 +8,9 @@ function M.build(numbered_code, input)
         .. 'The code block sent to you has line numbers in the leftmost column before a "|" character '
         .. '(e.g. " 14 | let x = 42"). Use those numbers as your L<number>: references. '
         .. 'Take the number from the user code, NOT from any tool results or file reads. '
-        .. "Explain non-obvious intent, design decisions, and gotchas — do not restate the code. "
-        .. "Do not repeat or quote source code lines in your answer. "
-        .. "If the code already says what it does, skip it.\n\n"
+        .. 'Explain non-obvious intent, design decisions, and gotchas — do not restate the code. '
+        .. 'Do not repeat or quote source code lines in your answer. '
+        .. 'If the code already says what it does, skip it.\n\n'
         .. 'Use list_directory to explore the filesystem and discover file locations. '
         .. 'For example, list_directory("lua/blip") shows the contents of that directory. '
         .. 'Use read_file_lines with filesystem paths relative to project root '

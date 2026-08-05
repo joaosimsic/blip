@@ -9,7 +9,10 @@ M.all = {
             parameters = {
                 type = 'object',
                 properties = {
-                    path = { type = 'string', description = 'Relative directory path from project root (e.g. "lua/blip")' },
+                    path = {
+                        type = 'string',
+                        description = 'Relative directory path from project root (e.g. "lua/blip")',
+                    },
                 },
                 required = { 'path' },
             },
@@ -39,7 +42,10 @@ M.all = {
             parameters = {
                 type = 'object',
                 properties = {
-                    path = { type = 'string', description = 'Relative path from project root (use filesystem path, e.g. "lua/blip/agent/init.lua", not a Lua require path like "blip.agent")' },
+                    path = {
+                        type = 'string',
+                        description = 'Relative path from project root (use filesystem path, e.g. "lua/blip/agent/init.lua", not a Lua require path like "blip.agent")',
+                    },
                     start_line = { type = 'number', description = 'First line to read (1-indexed, default 1)' },
                     end_line = {
                         type = 'number',
