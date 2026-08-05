@@ -1,5 +1,4 @@
 local display = require('blip.display')
-local api = require('blip.api')
 local tools = require('blip.tools')
 local messages = require('blip.agent.messages')
 local loop = require('blip.agent.loop')
@@ -10,7 +9,6 @@ function M.run(opts)
     local bufnr = opts.bufnr
     local extmark_line = opts.extmark_line
     local start_line = opts.start_line
-    local end_line = opts.end_line
     local numbered_code = opts.numbered_code
     local input = opts.input
     local project_root = tools.find_project_root(bufnr)

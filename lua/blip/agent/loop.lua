@@ -128,7 +128,8 @@ local function handle_tool_calls(tool_calls, messages, state)
     if had_repeat then
         table.insert(messages, {
             role = 'user',
-            content = '[System note: You just repeated one or more tool calls that already returned results. Use the information you already have and provide your answer instead of continuing to search.]',
+            content = '[System note: You just repeated one or more tool calls that already returned results. '
+                .. 'Use the information you already have and provide your answer instead of continuing to search.]',
         })
     end
 end
@@ -217,7 +218,7 @@ function M.agent_round(messages, state, depth)
         round_tools,
         state.provider,
         state.api_key,
-        function(chunk, accumulated) process_stream_delta(accumulated, state) end,
+        function(_, accumulated) process_stream_delta(accumulated, state) end,
         function(message)
             if message.reasoning_content then
                 state.reasoning = message.reasoning_content

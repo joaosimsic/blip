@@ -118,7 +118,6 @@ local function distribute_to_refs(bufnr, line_entries, extmark_ids)
             else
                 local indent = display.get_indent(bufnr, linenr)
                 local chunk = {}
-                local text = table.concat(entry, ' ')
                 local wrapped = display.wrap_text(text, indent)
                 for _, wl in ipairs(wrapped) do
                     table.insert(chunk, wl)

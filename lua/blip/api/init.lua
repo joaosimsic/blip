@@ -153,15 +153,10 @@ function M.chat_stream(messages, tools, provider, api_key, on_delta, on_complete
                             },
                         }
                     end
+                    local fn = accumulated_tool_calls[idx]['function']
                     if tc['function'] then
-                        if tc['function'].name then
-                            accumulated_tool_calls[idx]['function'].name = accumulated_tool_calls[idx]['function'].name
-                                .. tc['function'].name
-                        end
-                        if tc['function'].arguments then
-                            accumulated_tool_calls[idx]['function'].arguments = accumulated_tool_calls[idx]['function'].arguments
-                                .. tc['function'].arguments
-                        end
+                        if tc['function'].name then fn.name = fn.name .. tc['function'].name end
+                        if tc['function'].arguments then fn.arguments = fn.arguments .. tc['function'].arguments end
                     end
                 end
             end

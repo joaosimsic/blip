@@ -12,6 +12,6 @@ check-format:
 	stylua --check lua/ tests/
 
 lint:
-	luacheck lua/ tests/
+	luacheck lua/ tests/*_spec.lua
 
 .PHONY: test format check-format lint

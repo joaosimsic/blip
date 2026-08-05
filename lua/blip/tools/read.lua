@@ -48,7 +48,7 @@ local function resolve_path(path, project_root)
 end
 
 function M.read_file_lines(path, start_line, end_line, project_root, max_read_lines)
-    local full_path, lines = resolve_path(path, project_root)
+    local _, lines = resolve_path(path, project_root)
     if not lines then return "Error: could not read file '" .. path .. "'" end
 
     local default_range = (max_read_lines or 100) - 1
