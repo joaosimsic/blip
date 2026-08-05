@@ -17,13 +17,15 @@ function M.start(opts)
 
     vim.api.nvim_buf_clear_namespace(bufnr, display.ns_id, 0, -1)
 
+    local indent = display.get_indent(bufnr, extmark_line)
+
     local _, prompt_extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, display.ns_id, extmark_line, 0, {
-        virt_lines = { { { display.get_indent(bufnr, extmark_line) .. 'Prompt: ', 'Comment' } } },
+        virt_lines = { { { indent .. 'Prompt: ', 'Comment' } } },
     })
 
     local input_line = extmark_line + 1
-    vim.api.nvim_buf_set_lines(bufnr, input_line, input_line, false, { '' })
-    vim.api.nvim_win_set_cursor(0, { input_line + 1, 0 })
+    vim.api.nvim_buf_set_lines(bufnr, input_line, input_line, false, { indent })
+    vim.api.nvim_win_set_cursor(0, { input_line + 1, #indent })
 
     local submitting = false
     local canceling = false
