@@ -75,7 +75,7 @@ local function parse_response_lines(answer)
         if ref then
             current_ref = ref - 1
             has_refs = true
-            if not line_entries[current_ref] then line_entries[current_ref] = {} end
+            line_entries[current_ref] = {}
             if not is_table_line(rest) then wrap_and_add(line_entries[current_ref], rest) end
         elseif has_refs then
             if current_ref and not is_table_line(line) then wrap_and_add(line_entries[current_ref], line) end
